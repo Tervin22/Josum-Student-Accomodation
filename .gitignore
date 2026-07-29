@@ -15,7 +15,6 @@ apps/**/.env.*
 uploads
 tmp
 logs/
-pnpm-lock.yaml
 
 /generated/prisma
 .next-dev/
