@@ -12,10 +12,15 @@ COPY apps/api apps/api
 WORKDIR /app/apps/api
 RUN pnpm prisma:generate && pnpm build
 
-FROM base AS runner
+FROM node:22-alpine AS runner
 WORKDIR /app
 ENV NODE_ENV=production
+RUN corepack enable
 RUN addgroup -S nodejs && adduser -S nestjs -G nodejs
+COPY --from=build --chown=nestjs:nodejs /app/node_modules ./node_modules
+COPY --from=build --chown=nestjs:nodejs /app/package.json ./package.json
+COPY --from=build --chown=nestjs:nodejs /app/pnpm-workspace.yaml ./pnpm-workspace.yaml
+COPY --from=build --chown=nestjs:nodejs /app/apps/api/node_modules ./apps/api/node_modules
 COPY --from=build --chown=nestjs:nodejs /app/apps/api/package.json ./apps/api/package.json
 COPY --from=build --chown=nestjs:nodejs /app/apps/api/dist ./apps/api/dist
 COPY --from=build --chown=nestjs:nodejs /app/apps/api/prisma ./apps/api/prisma
