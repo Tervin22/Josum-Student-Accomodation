@@ -1,0 +1,86 @@
+{
+  "family": "josum-api",
+  "networkMode": "awsvpc",
+  "requiresCompatibilities": ["FARGATE"],
+  "cpu": "512",
+  "memory": "1024",
+  "executionRoleArn": "${ECS_TASK_EXECUTION_ROLE_ARN}",
+  "taskRoleArn": "${ECS_TASK_ROLE_ARN}",
+  "runtimePlatform": {
+    "cpuArchitecture": "X86_64",
+    "operatingSystemFamily": "LINUX"
+  },
+  "containerDefinitions": [
+    {
+      "name": "josum-api",
+      "image": "pending-image",
+      "essential": true,
+      "portMappings": [
+        {
+          "containerPort": 4000,
+          "hostPort": 4000,
+          "protocol": "tcp"
+        }
+      ],
+      "environment": [
+        { "name": "NODE_ENV", "value": "production" },
+        { "name": "API_PORT", "value": "4000" },
+        { "name": "PUBLIC_APP_URL", "value": "${PUBLIC_APP_URL}" },
+        { "name": "API_BASE_URL", "value": "${API_BASE_URL}" },
+        { "name": "WEB_ORIGIN", "value": "${WEB_ORIGIN}" },
+        { "name": "JWT_ACCESS_EXPIRES_IN", "value": "15m" },
+        { "name": "JWT_REFRESH_EXPIRES_IN", "value": "7d" },
+        { "name": "BCRYPT_ROUNDS", "value": "12" },
+        { "name": "THROTTLE_TTL_MS", "value": "60000" },
+        { "name": "THROTTLE_LIMIT", "value": "120" },
+        { "name": "APPLICATION_APPROVAL_EXPIRY_HOURS", "value": "72" },
+        { "name": "MAINTENANCE_ACK_SLA_HOURS", "value": "24" },
+        { "name": "MAINTENANCE_LOW_RESOLUTION_SLA_HOURS", "value": "48" },
+        { "name": "MAINTENANCE_HIGH_RESOLUTION_SLA_HOURS", "value": "12" },
+        { "name": "MAINTENANCE_SLA_SWEEP_INTERVAL_MS", "value": "300000" },
+        { "name": "VISITOR_CHECKOUT_REMINDER_SWEEP_MS", "value": "60000" },
+        { "name": "PAYMENT_REMINDER_SWEEP_INTERVAL_MS", "value": "3600000" },
+        { "name": "PAYMENT_REMINDER_BATCH_SIZE", "value": "500" },
+        { "name": "STORAGE_DRIVER", "value": "s3" },
+        { "name": "S3_REGION", "value": "af-south-1" },
+        { "name": "S3_BUCKET", "value": "${S3_BUCKET}" },
+        { "name": "S3_USE_IAM_ROLE", "value": "true" },
+        { "name": "S3_FORCE_PATH_STYLE", "value": "false" },
+        { "name": "MAX_UPLOAD_BYTES", "value": "10485760" },
+        { "name": "STORAGE_MAX_ITEM_IMAGES", "value": "6" },
+        { "name": "ALLOWED_UPLOAD_MIME_TYPES", "value": "application/pdf,image/jpeg,image/png" },
+        { "name": "SMTP_HOST", "value": "${SMTP_HOST}" },
+        { "name": "SMTP_PORT", "value": "${SMTP_PORT}" },
+        { "name": "SMTP_SECURE", "value": "${SMTP_SECURE}" },
+        { "name": "SMTP_FROM", "value": "${SMTP_FROM}" }
+      ],
+      "secrets": [
+        { "name": "DATABASE_URL", "valueFrom": "${APP_SECRET_ARN}:DATABASE_URL::" },
+        { "name": "JWT_ACCESS_SECRET", "valueFrom": "${APP_SECRET_ARN}:JWT_ACCESS_SECRET::" },
+        { "name": "JWT_REFRESH_SECRET", "valueFrom": "${APP_SECRET_ARN}:JWT_REFRESH_SECRET::" },
+        { "name": "INSTALLATION_ADMIN_TOKEN", "valueFrom": "${APP_SECRET_ARN}:INSTALLATION_ADMIN_TOKEN::" },
+        { "name": "FACTORY_RESET_RECOVERY_KEY", "valueFrom": "${APP_SECRET_ARN}:FACTORY_RESET_RECOVERY_KEY::" },
+        { "name": "STAFF_MANAGER_REGISTRATION_KEY", "valueFrom": "${APP_SECRET_ARN}:STAFF_MANAGER_REGISTRATION_KEY::" },
+        { "name": "STAFF_SECURITY_REGISTRATION_KEY", "valueFrom": "${APP_SECRET_ARN}:STAFF_SECURITY_REGISTRATION_KEY::" },
+        { "name": "STAFF_TECHNICIAN_REGISTRATION_KEY", "valueFrom": "${APP_SECRET_ARN}:STAFF_TECHNICIAN_REGISTRATION_KEY::" },
+        { "name": "SMTP_USER", "valueFrom": "${APP_SECRET_ARN}:SMTP_USER::" },
+        { "name": "SMTP_PASSWORD", "valueFrom": "${APP_SECRET_ARN}:SMTP_PASSWORD::" }
+      ],
+      "healthCheck": {
+        "command": ["CMD-SHELL", "node -e \"fetch('http://localhost:4000/health/ready').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))\""],
+        "interval": 30,
+        "timeout": 5,
+        "retries": 3,
+        "startPeriod": 60
+      },
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-group": "/ecs/josum-api",
+          "awslogs-region": "af-south-1",
+          "awslogs-stream-prefix": "api"
+        }
+      }
+    }
+  ]
+}

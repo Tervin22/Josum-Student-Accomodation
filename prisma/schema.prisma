@@ -1,0 +1,359 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model AdministratorProfile {
+  id        String   @id @db.Uuid
+  userId    String   @unique @db.Uuid
+  jobTitle  String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime
+  User      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Application {
+  id                       String                     @id @db.Uuid
+  referenceCode            String                     @unique
+  userId                   String                     @db.Uuid
+  roomTypeId               String                     @db.Uuid
+  status                   ApplicationStatus          @default(SUBMITTED)
+  institutionName          String?
+  courseName               String?
+  dateOfOccupation         DateTime?
+  nationality              String?
+  gender                   String?
+  postalCode               String?
+  studentAdvisorDetails    String?
+  paymentTerm              String?
+  guarantorFullName        String?
+  guarantorIdPassport      String?
+  guarantorCell            String?
+  guarantorEmail           String?
+  guarantorAddress         String?
+  guarantorNationality     String?
+  guarantorEmployer        String?
+  guarantorWorkTel         String?
+  nextOfKin1Name           String?
+  nextOfKin1Relationship   String?
+  nextOfKin1Cell           String?
+  nextOfKin2Name           String?
+  nextOfKin2Relationship   String?
+  nextOfKin2Cell           String?
+  nextOfKin3Name           String?
+  nextOfKin3Relationship   String?
+  nextOfKin3Cell           String?
+  medicalDetails           String?
+  termsAccepted            Boolean                    @default(false)
+  declarationAccepted      Boolean                    @default(false)
+  electronicSignatureName  String?
+  electronicSignatureIdPassport String?
+  signatureDataUrl         String?
+  signedAt                 DateTime?
+  fundingType              String?
+  specialRequirements      String?
+  adminNotes               String?
+  approvedAt               DateTime?
+  cancelledAt              DateTime?
+  createdAt                DateTime                   @default(now())
+  updatedAt                DateTime
+  RoomType                 RoomType                   @relation(fields: [roomTypeId], references: [id])
+  User                     User                       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  ApplicationStatusHistory ApplicationStatusHistory[]
+  Document                 Document[]
+
+  @@index([createdAt])
+  @@index([roomTypeId])
+  @@index([status])
+  @@index([userId])
+}
+
+model ApplicationStatusHistory {
+  id            String             @id @db.Uuid
+  applicationId String             @db.Uuid
+  fromStatus    ApplicationStatus?
+  toStatus      ApplicationStatus
+  note          String?
+  changedById   String?            @db.Uuid
+  createdAt     DateTime           @default(now())
+  Application   Application        @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  User          User?              @relation(fields: [changedById], references: [id])
+
+  @@index([applicationId])
+  @@index([createdAt])
+}
+
+model AuditLog {
+  id        String   @id @db.Uuid
+  actorId   String?  @db.Uuid
+  action    String
+  entity    String
+  entityId  String?
+  metadata  Json?
+  ipAddress String?
+  userAgent String?
+  createdAt DateTime @default(now())
+  User      User?    @relation(fields: [actorId], references: [id])
+
+  @@index([actorId])
+  @@index([createdAt])
+  @@index([entity])
+}
+
+model Document {
+  id            String       @id @db.Uuid
+  applicationId String       @db.Uuid
+  uploadedById  String       @db.Uuid
+  type          DocumentType
+  originalName  String
+  storageKey    String       @unique
+  mimeType      String
+  size          Int
+  checksum      String
+  createdAt     DateTime     @default(now())
+  Application   Application  @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  User          User         @relation(fields: [uploadedById], references: [id], onDelete: Cascade)
+
+  @@index([applicationId])
+  @@index([uploadedById])
+}
+
+model EmailLog {
+  id          String    @id @db.Uuid
+  recipient   String
+  subject     String
+  templateKey String?
+  status      String
+  error       String?
+  sentAt      DateTime?
+  createdAt   DateTime  @default(now())
+
+  @@index([recipient])
+  @@index([status])
+}
+
+model EmailTemplate {
+  id          String   @id @db.Uuid
+  key         String   @unique
+  subject     String
+  body        String
+  enabled     Boolean  @default(true)
+  updatedById String?  @db.Uuid
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime
+  User        User?    @relation(fields: [updatedById], references: [id])
+
+  @@index([enabled])
+}
+
+model MaintenanceRequest {
+  id             String              @id @db.Uuid
+  referenceCode  String              @unique
+  userId         String              @db.Uuid
+  roomTypeId     String?             @db.Uuid
+  category       MaintenanceCategory @default(OTHER)
+  priority       MaintenancePriority @default(MEDIUM)
+  status         MaintenanceStatus   @default(OPEN)
+  location       String?
+  title          String
+  description    String
+  resolutionNote String?
+  resolvedAt     DateTime?
+  resolvedById   String?             @db.Uuid
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime
+  RoomType       RoomType?           @relation(fields: [roomTypeId], references: [id], onDelete: SetNull)
+  ResolvedBy     User?               @relation("MaintenanceResolvedBy", fields: [resolvedById], references: [id])
+  User           User                @relation("MaintenanceRequestedBy", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([createdAt])
+  @@index([roomTypeId])
+  @@index([priority])
+  @@index([status])
+  @@index([userId])
+}
+
+model Notification {
+  id        String              @id @db.Uuid
+  userId    String              @db.Uuid
+  title     String
+  body      String
+  channel   NotificationChannel @default(SYSTEM)
+  readAt    DateTime?
+  createdAt DateTime            @default(now())
+  User      User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([readAt])
+  @@index([userId])
+}
+
+model PasswordReset {
+  id        String    @id @db.Uuid
+  userId    String    @db.Uuid
+  tokenHash String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+  User      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([expiresAt])
+  @@index([userId])
+}
+
+model Role {
+  id          String     @id @db.Uuid
+  name        RoleName   @unique
+  description String?
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime
+  UserRole    UserRole[]
+}
+
+model RoomType {
+  id                 String               @id @db.Uuid
+  roomTypeName       String               @unique @map("room_type_name")
+  totalRooms         Int                  @default(0) @map("total_rooms")
+  availableRooms     Int                  @default(0) @map("available_rooms")
+  createdAt          DateTime             @default(now())
+  updatedAt          DateTime
+  Application        Application[]
+  MaintenanceRequest MaintenanceRequest[]
+
+  @@map("RoomType")
+}
+
+model StudentProfile {
+  id             String    @id @db.Uuid
+  userId         String    @unique @db.Uuid
+  studentNumber  String?   @unique
+  institution    String?
+  course         String?
+  yearOfStudy    Int?
+  dateOfBirth    DateTime?
+  idNumber       String?
+  address        String?
+  emergencyName  String?
+  emergencyPhone String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime
+  User           User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model SystemSetting {
+  id          String   @id @db.Uuid
+  key         String   @unique
+  value       Json
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime
+}
+
+model User {
+  id                       String                     @id @db.Uuid
+  email                    String                     @unique
+  passwordHash             String
+  firstName                String
+  lastName                 String
+  phone                    String?
+  status                   UserStatus                 @default(ACTIVE)
+  refreshTokenHash         String?
+  createdAt                DateTime                   @default(now())
+  updatedAt                DateTime
+  AdministratorProfile     AdministratorProfile?
+  Application              Application[]
+  ApplicationStatusHistory ApplicationStatusHistory[]
+  AuditLog                 AuditLog[]
+  Document                 Document[]
+  EmailTemplate            EmailTemplate[]
+  MaintenanceRequest       MaintenanceRequest[]     @relation("MaintenanceRequestedBy")
+  ResolvedMaintenance      MaintenanceRequest[]     @relation("MaintenanceResolvedBy")
+  Notification             Notification[]
+  PasswordReset            PasswordReset[]
+  StudentProfile           StudentProfile?
+  UserRole                 UserRole[]
+
+  @@index([createdAt])
+  @@index([status])
+}
+
+model UserRole {
+  userId String @db.Uuid
+  roleId String @db.Uuid
+  Role   Role   @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  User   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([userId, roleId])
+  @@index([roleId])
+}
+
+enum ApplicationStatus {
+  SUBMITTED
+  UNDER_REVIEW
+  APPROVED
+  REJECTED
+  WAITLISTED
+  CANCELLED
+  MOVED_OUT
+}
+
+enum DocumentType {
+  ID_DOCUMENT
+  PROOF_OF_REGISTRATION
+  PROOF_OF_PAYMENT
+  OTHER
+  APPLICANT_ID_PASSPORT
+  STUDENT_COLOR_ID_PHOTOS
+  STUDENT_ACCEPTANCE_LETTER
+  GUARANTOR_SUPPORTING_DOCUMENTS
+  MEDICAL_AID_CERTIFICATE
+  STUDENT_ID_COPY
+  PROOF_OF_FUNDING
+  PARENT_ID_COPY
+  ACADEMIC_RECORD
+  ACCEPTANCE_LETTER
+}
+
+enum NotificationChannel {
+  SYSTEM
+  EMAIL
+}
+
+enum RoleName {
+  STUDENT
+  ADMINISTRATOR
+}
+
+enum MaintenanceStatus {
+  OPEN
+  ACKNOWLEDGED
+  IN_PROGRESS
+  RESOLVED
+  CLOSED
+}
+
+enum MaintenancePriority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+enum MaintenanceCategory {
+  PLUMBING
+  ELECTRICAL
+  FURNITURE
+  CLEANING
+  INTERNET
+  SECURITY
+  OTHER
+}
+
+enum UserStatus {
+  ACTIVE
+  SUSPENDED
+}

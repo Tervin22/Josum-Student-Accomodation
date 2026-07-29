@@ -1,0 +1,926 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum RoleName {
+  STUDENT
+  ADMINISTRATOR
+  MANAGER
+  SECURITY
+  TECHNICIAN
+}
+
+enum UserStatus {
+  ACTIVE
+  SUSPENDED
+}
+
+enum StayStatus {
+  ACTIVE
+  TERMINATED
+}
+
+enum ApplicationStatus {
+  SUBMITTED
+  UNDER_REVIEW
+  APPROVED
+  REJECTED
+  WAITLISTED
+  CANCELLED
+  MOVED_OUT
+}
+
+enum DocumentType {
+  ID_DOCUMENT
+  PROOF_OF_REGISTRATION
+  PROOF_OF_PAYMENT
+  OTHER
+  APPLICANT_ID_PASSPORT
+  STUDENT_COLOR_ID_PHOTOS
+  STUDENT_ACCEPTANCE_LETTER
+  GUARANTOR_SUPPORTING_DOCUMENTS
+  MEDICAL_AID_CERTIFICATE
+  STUDENT_ID_COPY
+  PROOF_OF_FUNDING
+  PARENT_ID_COPY
+  ACADEMIC_RECORD
+  ACCEPTANCE_LETTER
+}
+
+enum NotificationChannel {
+  SYSTEM
+  EMAIL
+}
+
+enum MaintenanceStatus {
+  OPEN
+  ACKNOWLEDGED
+  IN_PROGRESS
+  RESOLVED
+  CLOSED
+}
+
+enum MaintenancePriority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+enum MaintenanceCategory {
+  PLUMBING
+  ELECTRICAL
+  FURNITURE
+  CLEANING
+  INTERNET
+  SECURITY
+  OTHER
+}
+
+enum ResidenceRoomStatus {
+  AVAILABLE
+  RESERVED
+  OCCUPIED
+  MAINTENANCE
+}
+
+enum StorageRequestStatus {
+  DRAFT
+  SUBMITTED
+  UNDER_REVIEW
+  APPROVED
+  REJECTED
+  ITEMS_RECEIVED
+  RELEASE_REQUESTED
+  ITEMS_RELEASED
+  CANCELLED
+}
+
+enum StorageFileType {
+  FORM
+  ITEM_IMAGE
+}
+
+enum InspectionRating {
+  GOOD
+  FAIR
+  POOR
+  NOT_APPLICABLE
+}
+
+enum InspectionStatus {
+  DRAFT
+  COMPLETED
+  FOLLOW_UP_REQUIRED
+  CLOSED
+}
+
+enum InspectionSeverity {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum PaymentReminderStatus {
+  PENDING
+  SENT
+  FAILED
+}
+
+enum RegistrationBlockIdentifierType {
+  EMAIL
+  ID_NUMBER
+  STUDENT_NUMBER
+}
+
+model Role {
+  id          String     @id @default(uuid()) @db.Uuid
+  name        RoleName   @unique
+  description String?
+  users       UserRole[]
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+}
+
+model UserRole {
+  userId String @db.Uuid
+  roleId String @db.Uuid
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role   Role   @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@id([userId, roleId])
+  @@index([roleId])
+}
+
+model User {
+  id                            String                        @id @default(uuid()) @db.Uuid
+  email                         String                        @unique
+  passwordHash                  String
+  firstName                     String
+  lastName                      String
+  phone                         String?
+  status                        UserStatus                    @default(ACTIVE)
+  refreshTokenHash              String?
+  roles                         UserRole[]
+  studentProfile                StudentProfile?
+  administratorProfile          AdministratorProfile?
+  applications                  Application[]
+  maintenanceRequests           MaintenanceRequest[]          @relation("MaintenanceRequestedBy")
+  resolvedMaintenance           MaintenanceRequest[]          @relation("MaintenanceResolvedBy")
+  acknowledgedMaintenance       MaintenanceRequest[]          @relation("MaintenanceAcknowledgedBy")
+  assignedMaintenance           MaintenanceRequest[]          @relation("MaintenanceAssignedTechnician")
+  uploadedDocuments             Document[]                    @relation("UploadedDocuments")
+  notifications                 Notification[]
+  passwordResets                PasswordReset[]
+  statusChanges                 ApplicationStatusHistory[]    @relation("StatusChangedBy")
+  auditLogs                     AuditLog[]                    @relation("ActorAuditLogs")
+  updatedTemplates              EmailTemplate[]               @relation("TemplateUpdatedBy")
+  recordedVisitorLogs           VisitorLog[]                  @relation("VisitorRecordedBy")
+  hostedVisitorLogs             VisitorLog[]                  @relation("VisitorResident")
+  checkedOutVisitorLogs         VisitorLog[]                  @relation("VisitorCheckedOutBy")
+  overriddenVisitorLogs         VisitorLog[]                  @relation("VisitorOverrideBy")
+  terminatedApplications        Application[]                 @relation("ApplicationTerminatedBy")
+  paymentReminders              PaymentReminder[]
+  sourceRegistrationBlocks      StudentRegistrationBlock[]    @relation("RegistrationBlockSourceUser")
+  blockedRegistrationBlocks     StudentRegistrationBlock[]    @relation("RegistrationBlockBlockedBy")
+  whitelistedRegistrationBlocks StudentRegistrationBlock[]    @relation("RegistrationBlockWhitelistedBy")
+  visitorPreRegistrations       VisitorPreRegistration[]      @relation("VisitorPreRegisteredBy")
+  reportedIncidents             IncidentReport[]              @relation("IncidentReportedBy")
+  sentCommunications            Communication[]               @relation("CommunicationSentBy")
+  storageRequests               StorageRequest[]              @relation("StorageRequestedBy")
+  reviewedStorageRequests       StorageRequest[]              @relation("StorageReviewedBy")
+  receivedStorageRequests       StorageRequest[]              @relation("StorageReceivedBy")
+  releasedStorageRequests       StorageRequest[]              @relation("StorageReleasedBy")
+  storageStatusChanges          StorageRequestStatusHistory[] @relation("StorageStatusChangedBy")
+  inspectedInspections          Inspection[]                  @relation("InspectionInspector")
+  studentInspections            Inspection[]                  @relation("InspectionStudent")
+  createdAt                     DateTime                      @default(now())
+  updatedAt                     DateTime                      @updatedAt
+
+  @@index([status])
+  @@index([createdAt])
+}
+
+model StudentProfile {
+  id                       String    @id @default(uuid()) @db.Uuid
+  userId                   String    @unique @db.Uuid
+  user                     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  studentNumber            String?   @unique
+  institution              String?
+  course                   String?
+  yearOfStudy              Int?
+  dateOfBirth              DateTime?
+  idNumber                 String?
+  address                  String?
+  emergencyName            String?
+  emergencyPhone           String?
+  profileImageStorageKey   String?   @unique
+  profileImageOriginalName String?
+  profileImageMimeType     String?
+  profileImageSize         Int?
+  profileImageChecksum     String?
+  profileImageUploadedAt   DateTime?
+  createdAt                DateTime  @default(now())
+  updatedAt                DateTime  @updatedAt
+}
+
+model AdministratorProfile {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @unique @db.Uuid
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  jobTitle  String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model RoomType {
+  id                  String               @id @default(uuid()) @db.Uuid
+  roomTypeName        String               @unique @map("room_type_name")
+  totalRooms          Int                  @default(0) @map("total_rooms")
+  availableRooms      Int                  @default(0) @map("available_rooms")
+  applications        Application[]
+  maintenanceRequests MaintenanceRequest[]
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
+
+  @@map("RoomType")
+}
+
+model Residence {
+  id                       String                   @id @default(uuid()) @db.Uuid
+  name                     String                   @unique
+  address                  String
+  residenceType            String
+  totalRooms               Int
+  availableRooms           Int
+  description              String
+  facilities               String[]
+  amenities                String[]
+  distanceToNWU            Float
+  distanceToShoppingCentre Float
+  applications             Application[]
+  communications           Communication[]
+  storageRequests          StorageRequest[]         @relation("StorageResidence")
+  inspections              Inspection[]
+  rooms                    ResidenceRoom[]
+  visitorLogs              VisitorLog[]
+  visitorPreRegistrations  VisitorPreRegistration[]
+  incidentReports          IncidentReport[]
+  createdAt                DateTime                 @default(now())
+  updatedAt                DateTime                 @updatedAt
+
+  @@index([name])
+  @@index([availableRooms])
+}
+
+model ResidenceRoom {
+  id                      String                   @id @default(uuid()) @db.Uuid
+  residenceId             String                   @db.Uuid
+  residence               Residence                @relation(fields: [residenceId], references: [id], onDelete: Cascade)
+  roomNumber              Int
+  name                    String
+  genderAllocation        String
+  roomTypeName            String
+  capacity                Int                      @default(1)
+  status                  ResidenceRoomStatus      @default(AVAILABLE)
+  applications            Application[]
+  storageRequests         StorageRequest[]         @relation("StorageRoom")
+  visitorLogs             VisitorLog[]
+  visitorPreRegistrations VisitorPreRegistration[]
+  inspections             Inspection[]
+  createdAt               DateTime                 @default(now())
+  updatedAt               DateTime                 @updatedAt
+
+  @@unique([residenceId, roomNumber])
+  @@index([residenceId, status])
+}
+
+model Application {
+  id                            String                     @id @default(uuid()) @db.Uuid
+  referenceCode                 String                     @unique
+  userId                        String                     @db.Uuid
+  user                          User                       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  roomTypeId                    String                     @db.Uuid
+  roomType                      RoomType                   @relation(fields: [roomTypeId], references: [id])
+  residenceId                   String                     @db.Uuid
+  residence                     Residence                  @relation(fields: [residenceId], references: [id])
+  roomId                        String?                    @db.Uuid
+  room                          ResidenceRoom?             @relation(fields: [roomId], references: [id], onDelete: SetNull)
+  status                        ApplicationStatus          @default(SUBMITTED)
+  isNwuStudent                  Boolean                    @default(true)
+  studyYear                     String
+  studySemester                 String
+  returningStudent              Boolean                    @default(false)
+  applicantCategory             String                     @default("NEW_STUDENT")
+  academicRegistrationStatus    String?
+  applicantFirstName            String
+  applicantLastName             String
+  studentIdNumber               String
+  studentNumber                 String
+  studentPhone                  String
+  institutionName               String?
+  courseName                    String?
+  dateOfOccupation              DateTime?
+  nationality                   String?
+  gender                        String?
+  postalCode                    String?
+  studentAdvisorDetails         String?
+  paymentTerm                   String?
+  guarantorFullName             String?
+  guarantorIdPassport           String?
+  guarantorCell                 String?
+  guarantorEmail                String?
+  guarantorAddress              String?
+  guarantorNationality          String?
+  guarantorEmployer             String?
+  nextOfKin1Name                String?
+  nextOfKin1Relationship        String?
+  nextOfKin1Cell                String?
+  nextOfKin2Name                String?
+  nextOfKin2Relationship        String?
+  nextOfKin2Cell                String?
+  nextOfKin3Name                String?
+  nextOfKin3Relationship        String?
+  nextOfKin3Cell                String?
+  medicalDetails                String?
+  termsAccepted                 Boolean                    @default(false)
+  declarationAccepted           Boolean                    @default(false)
+  electronicSignatureName       String?
+  electronicSignatureIdPassport String?
+  signatureDataUrl              String?
+  signedAt                      DateTime?
+  fundingType                   String?
+  fundingReference              String?
+  hasMedicalConditions          Boolean                    @default(false)
+  additionalInformation         String?
+  specialRequirements           String?
+  adminNotes                    String?
+  approvedAt                    DateTime?
+  approvalExpiresAt             DateTime?
+  acceptedAt                    DateTime?
+  stayStatus                    StayStatus                 @default(ACTIVE)
+  terminatedAt                  DateTime?
+  terminatedById                String?                    @db.Uuid
+  terminatedBy                  User?                      @relation("ApplicationTerminatedBy", fields: [terminatedById], references: [id], onDelete: SetNull)
+  terminationReason             String?
+  documentsSatisfiedAt          DateTime?
+  cancelledAt                   DateTime?
+  documents                     Document[]
+  paymentReminders              PaymentReminder[]
+  storageRequests               StorageRequest[]           @relation("StorageApplication")
+  statusHistory                 ApplicationStatusHistory[]
+  createdAt                     DateTime                   @default(now())
+  updatedAt                     DateTime                   @updatedAt
+
+  @@index([userId])
+  @@index([userId, status])
+  @@index([roomTypeId])
+  @@index([residenceId])
+  @@index([residenceId, status, createdAt])
+  @@index([roomId])
+  @@index([status])
+  @@index([stayStatus])
+  @@index([terminatedAt])
+  @@index([status, acceptedAt, roomId])
+  @@index([createdAt])
+}
+
+model PaymentReminder {
+  id            String                @id @default(uuid()) @db.Uuid
+  applicationId String                @db.Uuid
+  application   Application           @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  userId        String                @db.Uuid
+  user          User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  periodYear    Int
+  periodMonth   Int
+  amountCents   Int                   @default(510000)
+  status        PaymentReminderStatus @default(PENDING)
+  recipient     String
+  emailLogId    String?               @db.Uuid
+  error         String?
+  sentAt        DateTime?
+  createdAt     DateTime              @default(now())
+  updatedAt     DateTime              @updatedAt
+
+  @@unique([applicationId, periodYear, periodMonth])
+  @@index([userId])
+  @@index([periodYear, periodMonth])
+  @@index([status])
+  @@index([createdAt])
+}
+
+model StudentRegistrationBlock {
+  id                   String                          @id @default(uuid()) @db.Uuid
+  identifierType       RegistrationBlockIdentifierType
+  identifierNormalized String
+  active               Boolean                         @default(true)
+  reason               String?
+  sourceUserId         String?                         @db.Uuid
+  sourceUser           User?                           @relation("RegistrationBlockSourceUser", fields: [sourceUserId], references: [id], onDelete: SetNull)
+  applicationId        String?                         @db.Uuid
+  blockedAt            DateTime                        @default(now())
+  blockedById          String?                         @db.Uuid
+  blockedBy            User?                           @relation("RegistrationBlockBlockedBy", fields: [blockedById], references: [id], onDelete: SetNull)
+  whitelistedAt        DateTime?
+  whitelistedById      String?                         @db.Uuid
+  whitelistedBy        User?                           @relation("RegistrationBlockWhitelistedBy", fields: [whitelistedById], references: [id], onDelete: SetNull)
+  createdAt            DateTime                        @default(now())
+  updatedAt            DateTime                        @updatedAt
+
+  @@unique([identifierType, identifierNormalized])
+  @@index([sourceUserId])
+  @@index([applicationId])
+  @@index([active])
+  @@index([blockedAt])
+  @@index([whitelistedAt])
+}
+
+model ApplicationStatusHistory {
+  id            String             @id @default(uuid()) @db.Uuid
+  applicationId String             @db.Uuid
+  application   Application        @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  fromStatus    ApplicationStatus?
+  toStatus      ApplicationStatus
+  note          String?
+  changedById   String?            @db.Uuid
+  changedBy     User?              @relation("StatusChangedBy", fields: [changedById], references: [id], onDelete: SetNull)
+  createdAt     DateTime           @default(now())
+
+  @@index([applicationId])
+  @@index([createdAt])
+}
+
+model Document {
+  id            String       @id @default(uuid()) @db.Uuid
+  applicationId String       @db.Uuid
+  application   Application  @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  uploadedById  String       @db.Uuid
+  uploadedBy    User         @relation("UploadedDocuments", fields: [uploadedById], references: [id], onDelete: Cascade)
+  type          DocumentType
+  originalName  String
+  storageKey    String       @unique
+  mimeType      String
+  size          Int
+  checksum      String
+  createdAt     DateTime     @default(now())
+
+  @@index([applicationId])
+  @@index([uploadedById])
+}
+
+model Notification {
+  id        String              @id @default(uuid()) @db.Uuid
+  userId    String              @db.Uuid
+  user      User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title     String
+  body      String
+  channel   NotificationChannel @default(SYSTEM)
+  readAt    DateTime?
+  createdAt DateTime            @default(now())
+
+  @@index([userId])
+  @@index([readAt])
+  @@index([userId, createdAt])
+  @@index([userId, readAt, createdAt])
+}
+
+model MaintenanceRequest {
+  id                               String              @id @default(uuid()) @db.Uuid
+  referenceCode                    String              @unique
+  userId                           String              @db.Uuid
+  user                             User                @relation("MaintenanceRequestedBy", fields: [userId], references: [id], onDelete: Cascade)
+  roomTypeId                       String?             @db.Uuid
+  roomType                         RoomType?           @relation(fields: [roomTypeId], references: [id], onDelete: SetNull)
+  category                         MaintenanceCategory @default(OTHER)
+  priority                         MaintenancePriority @default(MEDIUM)
+  status                           MaintenanceStatus   @default(OPEN)
+  location                         String?
+  title                            String
+  description                      String
+  acknowledgementDeadlineAt        DateTime?
+  acknowledgedAt                   DateTime?
+  acknowledgedById                 String?             @db.Uuid
+  acknowledgedBy                   User?               @relation("MaintenanceAcknowledgedBy", fields: [acknowledgedById], references: [id], onDelete: SetNull)
+  assignedTechnicianId             String?             @db.Uuid
+  assignedTechnician               User?               @relation("MaintenanceAssignedTechnician", fields: [assignedTechnicianId], references: [id], onDelete: SetNull)
+  resolutionDeadlineAt             DateTime?
+  resolutionNote                   String?
+  resolvedAt                       DateTime?
+  slaAcknowledgementBreachedAt     DateTime?
+  slaResolutionBreachedAt          DateTime?
+  acknowledgementSlaReminderSentAt DateTime?
+  resolutionSlaReminderSentAt      DateTime?
+  slaStatus                        String              @default("ACK_PENDING")
+  resolvedById                     String?             @db.Uuid
+  resolvedBy                       User?               @relation("MaintenanceResolvedBy", fields: [resolvedById], references: [id], onDelete: SetNull)
+  createdAt                        DateTime            @default(now())
+  updatedAt                        DateTime            @updatedAt
+
+  @@index([userId])
+  @@index([userId, createdAt])
+  @@index([roomTypeId])
+  @@index([status])
+  @@index([status, createdAt])
+  @@index([priority])
+  @@index([acknowledgementDeadlineAt])
+  @@index([resolutionDeadlineAt])
+  @@index([slaStatus])
+  @@index([acknowledgementSlaReminderSentAt])
+  @@index([resolutionSlaReminderSentAt])
+  @@index([acknowledgedById])
+  @@index([assignedTechnicianId])
+  @@index([createdAt])
+}
+
+model EmailLog {
+  id          String    @id @default(uuid()) @db.Uuid
+  recipient   String
+  subject     String
+  templateKey String?
+  status      String
+  error       String?
+  sentAt      DateTime?
+  createdAt   DateTime  @default(now())
+
+  @@index([recipient])
+  @@index([status])
+  @@index([status, createdAt])
+}
+
+model AuditLog {
+  id        String   @id @default(uuid()) @db.Uuid
+  actorId   String?  @db.Uuid
+  actor     User?    @relation("ActorAuditLogs", fields: [actorId], references: [id], onDelete: SetNull)
+  action    String
+  entity    String
+  entityId  String?
+  metadata  Json?
+  ipAddress String?
+  userAgent String?
+  createdAt DateTime @default(now())
+
+  @@index([actorId])
+  @@index([entity])
+  @@index([entity, createdAt])
+  @@index([createdAt])
+}
+
+model StorageRequest {
+  id                    String                        @id @default(uuid()) @db.Uuid
+  referenceCode         String                        @unique
+  userId                String                        @db.Uuid
+  user                  User                          @relation("StorageRequestedBy", fields: [userId], references: [id], onDelete: Cascade)
+  applicationId         String?                       @db.Uuid
+  application           Application?                  @relation("StorageApplication", fields: [applicationId], references: [id], onDelete: SetNull)
+  residenceId           String?                       @db.Uuid
+  residence             Residence?                    @relation("StorageResidence", fields: [residenceId], references: [id], onDelete: SetNull)
+  roomId                String?                       @db.Uuid
+  room                  ResidenceRoom?                @relation("StorageRoom", fields: [roomId], references: [id], onDelete: SetNull)
+  status                StorageRequestStatus          @default(SUBMITTED)
+  studentFullName       String?
+  studentNumber         String?
+  studentSignature      String?
+  studentRoomNumber     String?
+  numberOfItemsStored   Int?
+  storageSite           String?
+  storageNoticeAccepted Boolean                       @default(false)
+  managementSignature   String?
+  itemDescription       String?
+  reviewNotes           String?
+  submittedAt           DateTime                      @default(now())
+  reviewedAt            DateTime?
+  reviewedById          String?                       @db.Uuid
+  reviewedBy            User?                         @relation("StorageReviewedBy", fields: [reviewedById], references: [id], onDelete: SetNull)
+  receivedAt            DateTime?
+  receivedById          String?                       @db.Uuid
+  receivedBy            User?                         @relation("StorageReceivedBy", fields: [receivedById], references: [id], onDelete: SetNull)
+  releasedAt            DateTime?
+  releasedById          String?                       @db.Uuid
+  releasedBy            User?                         @relation("StorageReleasedBy", fields: [releasedById], references: [id], onDelete: SetNull)
+  files                 StorageRequestFile[]
+  statusHistory         StorageRequestStatusHistory[]
+  createdAt             DateTime                      @default(now())
+  updatedAt             DateTime                      @updatedAt
+
+  @@index([userId])
+  @@index([applicationId])
+  @@index([residenceId])
+  @@index([roomId])
+  @@index([status])
+  @@index([studentNumber])
+  @@index([storageSite])
+  @@index([submittedAt])
+  @@index([status, submittedAt])
+}
+
+model StorageRequestFile {
+  id           String          @id @default(uuid()) @db.Uuid
+  requestId    String          @db.Uuid
+  request      StorageRequest  @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  uploadedById String          @db.Uuid
+  fileType     StorageFileType
+  originalName String
+  storageKey   String          @unique
+  mimeType     String
+  size         Int
+  checksum     String
+  createdAt    DateTime        @default(now())
+
+  @@index([requestId])
+  @@index([uploadedById])
+  @@index([fileType])
+  @@index([createdAt])
+}
+
+model StorageRequestStatusHistory {
+  id               String                @id @default(uuid()) @db.Uuid
+  storageRequestId String                @db.Uuid
+  storageRequest   StorageRequest        @relation(fields: [storageRequestId], references: [id], onDelete: Cascade)
+  fromStatus       StorageRequestStatus?
+  toStatus         StorageRequestStatus
+  note             String?
+  changedById      String?               @db.Uuid
+  changedBy        User?                 @relation("StorageStatusChangedBy", fields: [changedById], references: [id], onDelete: SetNull)
+  createdAt        DateTime              @default(now())
+
+  @@index([storageRequestId])
+  @@index([changedById])
+  @@index([createdAt])
+}
+
+model Communication {
+  id             String     @id @default(uuid()) @db.Uuid
+  type           String
+  subject        String
+  message        String
+  residenceId    String?    @db.Uuid
+  residence      Residence? @relation(fields: [residenceId], references: [id], onDelete: SetNull)
+  sentById       String?    @db.Uuid
+  sentBy         User?      @relation("CommunicationSentBy", fields: [sentById], references: [id], onDelete: SetNull)
+  recipientCount Int        @default(0)
+  successCount   Int        @default(0)
+  failedCount    Int        @default(0)
+  createdAt      DateTime   @default(now())
+
+  @@index([type])
+  @@index([residenceId])
+  @@index([sentById])
+  @@index([createdAt])
+}
+
+model InspectionPeriod {
+  id          String       @id @default(uuid()) @db.Uuid
+  name        String
+  year        Int
+  startDate   DateTime?
+  endDate     DateTime?
+  isActive    Boolean      @default(true)
+  inspections Inspection[]
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  @@unique([name, year])
+  @@index([year])
+  @@index([isActive])
+}
+
+model Inspection {
+  id                     String                 @id @default(uuid()) @db.Uuid
+  referenceCode          String                 @unique
+  periodId               String                 @db.Uuid
+  period                 InspectionPeriod       @relation(fields: [periodId], references: [id], onDelete: Restrict)
+  residenceId            String                 @db.Uuid
+  residence              Residence              @relation(fields: [residenceId], references: [id], onDelete: Restrict)
+  roomId                 String                 @db.Uuid
+  room                   ResidenceRoom          @relation(fields: [roomId], references: [id], onDelete: Restrict)
+  studentId              String?                @db.Uuid
+  student                User?                  @relation("InspectionStudent", fields: [studentId], references: [id], onDelete: SetNull)
+  studentFullName        String?
+  studentNumber          String?
+  contactNumber          String?
+  emailAddress           String?
+  keyNumberIssued        String?
+  occupantNames          String?
+  inspectorId            String?                @db.Uuid
+  inspector              User?                  @relation("InspectionInspector", fields: [inspectorId], references: [id], onDelete: SetNull)
+  inspectionDate         DateTime
+  checkInDate            DateTime?
+  checkOutDate           DateTime?
+  certifiedIdCopy        Boolean                @default(false)
+  proofOfRegistration    Boolean                @default(false)
+  academicRecord         Boolean                @default(false)
+  proofOfFunding         Boolean                @default(false)
+  signedLeaseAgreement   Boolean                @default(false)
+  moveInConditions       Json?
+  moveOutConditions      Json?
+  itemsBroughtIn         String[]               @default([])
+  generalCleanliness     InspectionRating       @default(GOOD)
+  walls                  InspectionRating       @default(GOOD)
+  doorsAndLocks          InspectionRating       @default(GOOD)
+  windows                InspectionRating       @default(GOOD)
+  flooring               InspectionRating       @default(GOOD)
+  ceiling                InspectionRating       @default(GOOD)
+  lighting               InspectionRating       @default(GOOD)
+  electricalSockets      InspectionRating       @default(GOOD)
+  plumbing               InspectionRating       @default(GOOD)
+  bathroomCondition      InspectionRating       @default(GOOD)
+  furnitureCondition     InspectionRating       @default(GOOD)
+  bedCondition           InspectionRating       @default(GOOD)
+  wardrobeCondition      InspectionRating       @default(GOOD)
+  appliances             InspectionRating       @default(NOT_APPLICABLE)
+  fireSafetyEquipment    InspectionRating       @default(GOOD)
+  damageIdentified       String?
+  maintenanceRequired    Boolean                @default(false)
+  severity               InspectionSeverity     @default(LOW)
+  comments               String?
+  studentAcknowledgement Boolean                @default(false)
+  inspectorConfirmed     Boolean                @default(false)
+  studentConfirmed       Boolean                @default(false)
+  followUpRequired       Boolean                @default(false)
+  followUpDate           DateTime?
+  followUpActions        String?
+  studentDeclaration     Boolean                @default(false)
+  studentSignature       String?
+  studentSignatureDate   DateTime?
+  managementSignatureIn  String?
+  managementSignatureOut String?
+  tenantSignatureIn      String?
+  tenantSignatureOut     String?
+  status                 InspectionStatus       @default(DRAFT)
+  completedAt            DateTime?
+  attachments            InspectionAttachment[]
+  createdAt              DateTime               @default(now())
+  updatedAt              DateTime               @updatedAt
+
+  @@unique([periodId, roomId])
+  @@index([periodId])
+  @@index([residenceId])
+  @@index([roomId])
+  @@index([studentId])
+  @@index([inspectorId])
+  @@index([status])
+  @@index([inspectionDate])
+  @@index([studentNumber])
+  @@index([checkInDate])
+  @@index([checkOutDate])
+  @@index([createdAt])
+}
+
+model InspectionAttachment {
+  id           String     @id @default(uuid()) @db.Uuid
+  inspectionId String     @db.Uuid
+  inspection   Inspection @relation(fields: [inspectionId], references: [id], onDelete: Cascade)
+  uploadedById String?    @db.Uuid
+  originalName String
+  storageKey   String     @unique
+  mimeType     String
+  size         Int
+  checksum     String
+  createdAt    DateTime   @default(now())
+
+  @@index([inspectionId])
+  @@index([uploadedById])
+  @@index([createdAt])
+}
+
+model PasswordReset {
+  id        String    @id @default(uuid()) @db.Uuid
+  userId    String    @db.Uuid
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId])
+  @@index([expiresAt])
+}
+
+model SystemSetting {
+  id          String   @id @default(uuid()) @db.Uuid
+  key         String   @unique
+  value       Json
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model EmailTemplate {
+  id          String   @id @default(uuid()) @db.Uuid
+  key         String   @unique
+  subject     String
+  body        String
+  enabled     Boolean  @default(true)
+  updatedById String?  @db.Uuid
+  updatedBy   User?    @relation("TemplateUpdatedBy", fields: [updatedById], references: [id], onDelete: SetNull)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([enabled])
+}
+
+model VisitorPreRegistration {
+  id                  String         @id @default(uuid()) @db.Uuid
+  userId              String         @db.Uuid
+  user                User           @relation("VisitorPreRegisteredBy", fields: [userId], references: [id], onDelete: Cascade)
+  residenceId         String?        @db.Uuid
+  residence           Residence?     @relation(fields: [residenceId], references: [id], onDelete: SetNull)
+  roomId              String?        @db.Uuid
+  room                ResidenceRoom? @relation(fields: [roomId], references: [id], onDelete: SetNull)
+  visitorName         String
+  visitorPhone        String?
+  visitorIdNumber     String?
+  relationship        String
+  expectedVisitDate   DateTime
+  expectedArrivalTime String
+  vehicleRegistration String?
+  notes               String?
+  termsAccepted       Boolean        @default(false)
+  status              String         @default("PENDING")
+  visitorLog          VisitorLog?
+  createdAt           DateTime       @default(now())
+  updatedAt           DateTime       @updatedAt
+
+  @@index([userId])
+  @@index([residenceId])
+  @@index([roomId])
+  @@index([status])
+  @@index([expectedVisitDate])
+  @@index([createdAt])
+}
+
+model VisitorLog {
+  id                     String                  @id @default(uuid()) @db.Uuid
+  visitorName            String
+  visitorPhone           String?
+  visitorIdNumber        String?
+  userId                 String?                 @db.Uuid
+  user                   User?                   @relation("VisitorResident", fields: [userId], references: [id], onDelete: SetNull)
+  roomId                 String?                 @db.Uuid
+  room                   ResidenceRoom?          @relation(fields: [roomId], references: [id], onDelete: SetNull)
+  preRegistrationId      String?                 @unique @db.Uuid
+  preRegistration        VisitorPreRegistration? @relation(fields: [preRegistrationId], references: [id], onDelete: SetNull)
+  residentName           String?
+  residenceId            String?                 @db.Uuid
+  residence              Residence?              @relation(fields: [residenceId], references: [id], onDelete: SetNull)
+  relationship           String?
+  purpose                String?
+  vehicleRegistration    String?
+  notes                  String?
+  termsAccepted          Boolean                 @default(false)
+  recordedById           String?                 @db.Uuid
+  recordedBy             User?                   @relation("VisitorRecordedBy", fields: [recordedById], references: [id], onDelete: SetNull)
+  checkedOutById         String?                 @db.Uuid
+  checkedOutBy           User?                   @relation("VisitorCheckedOutBy", fields: [checkedOutById], references: [id], onDelete: SetNull)
+  checkoutNotes          String?
+  overrideReason         String?
+  overrideById           String?                 @db.Uuid
+  overrideBy             User?                   @relation("VisitorOverrideBy", fields: [overrideById], references: [id], onDelete: SetNull)
+  overrideAt             DateTime?
+  checkedInAt            DateTime                @default(now())
+  checkedOutAt           DateTime?
+  checkoutReminderSentAt DateTime?
+  createdAt              DateTime                @default(now())
+  updatedAt              DateTime                @updatedAt
+
+  @@index([residenceId])
+  @@index([userId])
+  @@index([roomId])
+  @@index([recordedById])
+  @@index([checkedOutById])
+  @@index([overrideById])
+  @@index([checkedInAt])
+  @@index([checkedOutAt])
+  @@index([checkoutReminderSentAt])
+}
+
+model IncidentReport {
+  id             String     @id @default(uuid()) @db.Uuid
+  referenceCode  String     @unique
+  title          String
+  description    String
+  category       String
+  severity       String     @default("LOW")
+  status         String     @default("OPEN")
+  residenceId    String?    @db.Uuid
+  residence      Residence? @relation(fields: [residenceId], references: [id], onDelete: SetNull)
+  location       String?
+  reportedById   String?    @db.Uuid
+  reportedBy     User?      @relation("IncidentReportedBy", fields: [reportedById], references: [id], onDelete: SetNull)
+  resolutionNote String?
+  resolvedAt     DateTime?
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+
+  @@index([status])
+  @@index([severity])
+  @@index([residenceId])
+  @@index([reportedById])
+  @@index([createdAt])
+}

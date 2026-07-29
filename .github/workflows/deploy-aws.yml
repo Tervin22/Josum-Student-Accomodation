@@ -1,0 +1,231 @@
+name: Deploy to AWS Cape Town
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+  id-token: write
+
+env:
+  AWS_REGION: af-south-1
+  API_ECR_REPOSITORY: josum-api
+  WEB_ECR_REPOSITORY: josum-web
+  API_CONTAINER_NAME: josum-api
+  WEB_CONTAINER_NAME: josum-web
+  ECS_CLUSTER: ${{ vars.ECS_CLUSTER }}
+  API_ECS_SERVICE: ${{ vars.API_ECS_SERVICE }}
+  WEB_ECS_SERVICE: ${{ vars.WEB_ECS_SERVICE }}
+  PUBLIC_APP_URL: ${{ vars.PUBLIC_APP_URL }}
+  API_BASE_URL: ${{ vars.API_BASE_URL }}
+  WEB_ORIGIN: ${{ vars.WEB_ORIGIN }}
+  NEXT_PUBLIC_API_URL: ${{ vars.NEXT_PUBLIC_API_URL }}
+  NEXT_PUBLIC_BRAND_LOGO_URL: ${{ vars.NEXT_PUBLIC_BRAND_LOGO_URL || 'https://josumres.co.za/wp-content/uploads/2025/08/Josum-Company-Logo-Final-Homepage.png' }}
+  NEXT_PUBLIC_AUTH_HERO_IMAGE_URL: ${{ vars.NEXT_PUBLIC_AUTH_HERO_IMAGE_URL || 'https://josumres.co.za/wp-content/uploads/2025/08/WhatsApp-Image-2025-07-24-at-15.32.24_7cd2a337.jpg' }}
+  S3_BUCKET: ${{ vars.S3_BUCKET }}
+  SMTP_HOST: ${{ vars.SMTP_HOST }}
+  SMTP_PORT: ${{ vars.SMTP_PORT }}
+  SMTP_SECURE: ${{ vars.SMTP_SECURE }}
+  SMTP_FROM: ${{ vars.SMTP_FROM }}
+  ECS_PRIVATE_SUBNETS: ${{ vars.ECS_PRIVATE_SUBNETS }}
+  ECS_TASK_SECURITY_GROUPS: ${{ vars.ECS_TASK_SECURITY_GROUPS }}
+  APP_SECRET_ARN: ${{ secrets.APP_SECRET_ARN }}
+  ECS_TASK_EXECUTION_ROLE_ARN: ${{ secrets.ECS_TASK_EXECUTION_ROLE_ARN }}
+  ECS_TASK_ROLE_ARN: ${{ secrets.ECS_TASK_ROLE_ARN }}
+  AWS_GITHUB_ACTIONS_ROLE_ARN: ${{ secrets.AWS_GITHUB_ACTIONS_ROLE_ARN }}
+
+jobs:
+  deploy:
+    name: Build, migrate, and deploy
+    runs-on: ubuntu-latest
+    environment: production
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate deployment configuration
+        shell: bash
+        run: |
+          set -euo pipefail
+          required=(
+            AWS_GITHUB_ACTIONS_ROLE_ARN
+            ECS_CLUSTER
+            API_ECS_SERVICE
+            WEB_ECS_SERVICE
+            PUBLIC_APP_URL
+            API_BASE_URL
+            WEB_ORIGIN
+            NEXT_PUBLIC_API_URL
+            S3_BUCKET
+            SMTP_HOST
+            SMTP_PORT
+            SMTP_SECURE
+            SMTP_FROM
+            ECS_PRIVATE_SUBNETS
+            ECS_TASK_SECURITY_GROUPS
+            APP_SECRET_ARN
+            ECS_TASK_EXECUTION_ROLE_ARN
+            ECS_TASK_ROLE_ARN
+          )
+          for name in "${required[@]}"; do
+            if [ -z "${!name:-}" ]; then
+              echo "::error::Missing GitHub production variable or secret: ${name}"
+              exit 1
+            fi
+          done
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_GITHUB_ACTIONS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Ensure ECR repositories and log groups exist
+        shell: bash
+        run: |
+          set -euo pipefail
+          for repo in "$API_ECR_REPOSITORY" "$WEB_ECR_REPOSITORY"; do
+            aws ecr describe-repositories --repository-names "$repo" >/dev/null 2>&1 || \
+              aws ecr create-repository \
+                --repository-name "$repo" \
+                --image-scanning-configuration scanOnPush=true \
+                --encryption-configuration encryptionType=AES256 >/dev/null
+          done
+
+          for group in /ecs/josum-api /ecs/josum-web /ecs/josum-migrate; do
+            aws logs create-log-group --log-group-name "$group" 2>/dev/null || true
+            aws logs put-retention-policy --log-group-name "$group" --retention-in-days 30
+          done
+
+      - name: Build and push API image
+        id: build-api
+        shell: bash
+        run: |
+          set -euo pipefail
+          image="${{ steps.login-ecr.outputs.registry }}/${API_ECR_REPOSITORY}:${GITHUB_SHA}"
+          docker build -f apps/api/Dockerfile -t "$image" .
+          docker push "$image"
+          echo "image=$image" >> "$GITHUB_OUTPUT"
+
+      - name: Build and push web image
+        id: build-web
+        shell: bash
+        run: |
+          set -euo pipefail
+          image="${{ steps.login-ecr.outputs.registry }}/${WEB_ECR_REPOSITORY}:${GITHUB_SHA}"
+          brand_logo="${NEXT_PUBLIC_BRAND_LOGO_URL:-https://josumres.co.za/wp-content/uploads/2025/08/Josum-Company-Logo-Final-Homepage.png}"
+          hero_image="${NEXT_PUBLIC_AUTH_HERO_IMAGE_URL:-https://josumres.co.za/wp-content/uploads/2025/08/WhatsApp-Image-2025-07-24-at-15.32.24_7cd2a337.jpg}"
+          docker build \
+            -f apps/web/Dockerfile \
+            --build-arg NEXT_PUBLIC_API_URL="$NEXT_PUBLIC_API_URL" \
+            --build-arg NEXT_PUBLIC_BRAND_LOGO_URL="$brand_logo" \
+            --build-arg NEXT_PUBLIC_AUTH_HERO_IMAGE_URL="$hero_image" \
+            -t "$image" .
+          docker push "$image"
+          echo "image=$image" >> "$GITHUB_OUTPUT"
+
+      - name: Render ECS task definition templates
+        shell: bash
+        run: |
+          set -euo pipefail
+          node <<'NODE'
+          const fs = require('fs');
+
+          const render = (input, output) => {
+            const source = fs.readFileSync(input, 'utf8');
+            const rendered = source.replace(/\$\{([A-Z0-9_]+)\}/g, (_, name) => {
+              const value = process.env[name];
+              if (!value) throw new Error(`Missing environment value for ${name}`);
+              return value.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+            });
+            JSON.parse(rendered);
+            fs.writeFileSync(output, rendered);
+          };
+
+          render('infra/aws/ecs/api-task-definition.template.json', '/tmp/api-task-definition.json');
+          render('infra/aws/ecs/web-task-definition.template.json', '/tmp/web-task-definition.json');
+          render('infra/aws/ecs/migrate-task-definition.template.json', '/tmp/migrate-task-definition.json');
+          NODE
+
+      - name: Render migration task definition
+        id: migrate-task-def
+        uses: aws-actions/amazon-ecs-render-task-definition@v1
+        with:
+          task-definition: /tmp/migrate-task-definition.json
+          container-name: ${{ env.API_CONTAINER_NAME }}
+          image: ${{ steps.build-api.outputs.image }}
+
+      - name: Run database migrations
+        shell: bash
+        run: |
+          set -euo pipefail
+          task_definition_arn="$(aws ecs register-task-definition \
+            --cli-input-json "file://${{ steps.migrate-task-def.outputs.task-definition }}" \
+            --query 'taskDefinition.taskDefinitionArn' \
+            --output text)"
+
+          task_arn="$(aws ecs run-task \
+            --cluster "$ECS_CLUSTER" \
+            --task-definition "$task_definition_arn" \
+            --launch-type FARGATE \
+            --network-configuration "awsvpcConfiguration={subnets=[$ECS_PRIVATE_SUBNETS],securityGroups=[$ECS_TASK_SECURITY_GROUPS],assignPublicIp=DISABLED}" \
+            --query 'tasks[0].taskArn' \
+            --output text)"
+
+          if [ -z "$task_arn" ] || [ "$task_arn" = "None" ]; then
+            echo "::error::Could not start migration task"
+            exit 1
+          fi
+
+          aws ecs wait tasks-stopped --cluster "$ECS_CLUSTER" --tasks "$task_arn"
+          exit_code="$(aws ecs describe-tasks \
+            --cluster "$ECS_CLUSTER" \
+            --tasks "$task_arn" \
+            --query 'tasks[0].containers[0].exitCode' \
+            --output text)"
+
+          if [ "$exit_code" != "0" ]; then
+            aws ecs describe-tasks --cluster "$ECS_CLUSTER" --tasks "$task_arn"
+            echo "::error::Migration task failed with exit code ${exit_code}"
+            exit 1
+          fi
+
+      - name: Render API task definition
+        id: api-task-def
+        uses: aws-actions/amazon-ecs-render-task-definition@v1
+        with:
+          task-definition: /tmp/api-task-definition.json
+          container-name: ${{ env.API_CONTAINER_NAME }}
+          image: ${{ steps.build-api.outputs.image }}
+
+      - name: Deploy API service
+        uses: aws-actions/amazon-ecs-deploy-task-definition@v2
+        with:
+          task-definition: ${{ steps.api-task-def.outputs.task-definition }}
+          service: ${{ env.API_ECS_SERVICE }}
+          cluster: ${{ env.ECS_CLUSTER }}
+          wait-for-service-stability: true
+
+      - name: Render web task definition
+        id: web-task-def
+        uses: aws-actions/amazon-ecs-render-task-definition@v1
+        with:
+          task-definition: /tmp/web-task-definition.json
+          container-name: ${{ env.WEB_CONTAINER_NAME }}
+          image: ${{ steps.build-web.outputs.image }}
+
+      - name: Deploy web service
+        uses: aws-actions/amazon-ecs-deploy-task-definition@v2
+        with:
+          task-definition: ${{ steps.web-task-def.outputs.task-definition }}
+          service: ${{ env.WEB_ECS_SERVICE }}
+          cluster: ${{ env.ECS_CLUSTER }}
+          wait-for-service-stability: true

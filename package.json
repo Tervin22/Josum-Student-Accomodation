@@ -1,0 +1,37 @@
+{
+  "name": "josum-student-accommodation",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Production-ready multi-residence booking system for Josum Student Accommodation.",
+  "type": "module",
+  "packageManager": "pnpm@10.14.0",
+  "scripts": {
+    "dev": "corepack pnpm --parallel --filter @josum/api --filter @josum/web dev",
+    "build": "corepack pnpm -r build",
+    "lint": "corepack pnpm -r lint",
+    "test": "corepack pnpm --filter @josum/api test",
+    "db:migrate": "corepack pnpm --filter @josum/api prisma:migrate",
+    "db:generate": "corepack pnpm --filter @josum/api prisma:generate",
+    "start:local": "powershell -ExecutionPolicy Bypass -File scripts/start-local.ps1"
+  },
+  "engines": {
+    "node": ">=22.0.0",
+    "pnpm": ">=10.0.0"
+  },
+  "devDependencies": {
+    "prisma": "^6.19.3"
+  },
+  "dependencies": {
+    "@prisma/client": "^6.19.3",
+    "express": "^5.2.1"
+  },
+  "pnpm": {
+    "overrides": {
+      "js-yaml": "^4.2.0",
+      "multer": "^2.2.0",
+      "nodemailer": "^9.0.1",
+      "postcss": "^8.5.10",
+      "tar": "^7.5.16"
+    }
+  }
+}

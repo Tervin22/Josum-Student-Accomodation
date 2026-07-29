@@ -1,0 +1,10 @@
+node_modules
+apps/**/node_modules
+apps/**/.next
+apps/**/dist
+.git
+.env
+.env.local
+.docker-temp
+uploads
+*.log
