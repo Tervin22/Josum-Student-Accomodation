@@ -28,4 +28,4 @@ RUN mkdir -p /app/uploads && chown -R nestjs:nodejs /app/uploads
 WORKDIR /app/apps/api
 USER nestjs
 EXPOSE 4000
-CMD ["pnpm", "start"]
+CMD ["sh", "-c", "npx prisma migrate deploy && pnpm start"]
