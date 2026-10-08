@@ -9,6 +9,7 @@ import { MaintenanceSlaPanel } from '@/components/MaintenanceSlaPanel';
 import { StatusBadge } from '@/components/StatusBadge';
 import { useToast } from '@/components/ToastProvider';
 import { api, compactForm, downloadDocument, downloadStorageFile, downloadStorageFormTemplate, getSession, upload } from '@/lib/api';
+import { EDULOFT_STORAGE_SITE } from '@/lib/eduloft';
 import { dashboardPathForRoles } from '@/lib/role-routing';
 import type { Application, DocumentRecord, MaintenanceCategory, MaintenancePriority, MaintenanceRequest, MaintenanceStatus, NotificationRecord, Residence, ResidenceRoom, RoomType, StorageRequest, User, VisitorPreRegistration } from '@/lib/types';
 
@@ -30,7 +31,7 @@ const maintenancePriorities: MaintenancePriority[] = ['LOW', 'MEDIUM', 'HIGH', '
 type ApplicationDraft = Record<string, string>;
 type DocumentTypeValue = DocumentRecord['type'];
 
-const APPLICATION_DRAFT_STORAGE_KEY = 'josum.applicationDraft.v1';
+const APPLICATION_DRAFT_STORAGE_KEY = 'eduloft.applicationDraft.v1';
 const documentTypeOptions: ReadonlyArray<readonly [DocumentTypeValue, string]> = [
   ['STUDENT_ID_COPY', 'Student ID Copy'],
   ['PROOF_OF_FUNDING', 'Proof of funding'],
@@ -51,8 +52,7 @@ const documentTypeLabels: Partial<Record<DocumentTypeValue, string>> = {
   OTHER: 'Other',
 };
 const storageSiteOptions = [
-  ['JOSUM_ONE', 'Josum One'],
-  ['JOSUM_TWO', 'Josum Two'],
+  [EDULOFT_STORAGE_SITE, 'Eduloft Centurion'],
 ] as const;
 
 export default function StudentDashboardPage() {
@@ -151,10 +151,10 @@ export default function StudentDashboardPage() {
 
     selectTabFromLocation();
     window.addEventListener('popstate', selectTabFromLocation);
-    window.addEventListener('josum:set-dashboard-tab', handleDashboardTab);
+    window.addEventListener('eduloft:set-dashboard-tab', handleDashboardTab);
     return () => {
       window.removeEventListener('popstate', selectTabFromLocation);
-      window.removeEventListener('josum:set-dashboard-tab', handleDashboardTab);
+      window.removeEventListener('eduloft:set-dashboard-tab', handleDashboardTab);
     };
   }, []);
 
@@ -640,7 +640,7 @@ export default function StudentDashboardPage() {
                   <h3 className="text-sm font-semibold uppercase text-slate-500">Booking details</h3>
                   <div className="grid gap-4 md:grid-cols-2">
                     <label className="grid gap-1 text-sm font-medium text-ink">
-                      NWU Vaal Triangle student
+                      Accepted or registered student near Eduloft
                       <select name="isNwuStudent" required defaultValue="true" className="focus-ring h-11 w-full rounded-lg border border-line bg-white px-3 py-2">
                         <option value="true">Yes</option>
                         <option value="false">No</option>
@@ -705,8 +705,8 @@ export default function StudentDashboardPage() {
                       >
                         <option value="">Select residence</option>
                         {residences.map((residence) => (
-                          <option key={residence.id} value={residence.id} disabled={residence.availableRooms === 0}>
-                            {residence.name} - {residence.availableRooms} rooms available
+                          <option key={residence.id} value={residence.id}>
+                            {residence.name} - {residence.availableRooms > 0 ? `${residence.availableRooms} rooms available` : 'inventory pending'}
                           </option>
                         ))}
                       </select>
@@ -728,7 +728,7 @@ export default function StudentDashboardPage() {
                           ))}
                         </select>
                         <span className="text-xs font-normal text-slate-500">
-                          Josum 1 rooms 1-50 are allocated to female students and rooms 51-78 to male students.
+                          Returning-student room selection is available after Eduloft administrators configure confirmed room inventory.
                         </span>
                       </label>
                     )}
@@ -750,7 +750,7 @@ export default function StudentDashboardPage() {
                       </select>
                       {!roomTypes.length && (
                         <span className="text-xs font-normal text-slate-500">
-                          No numbered rooms are currently available.
+                          Room categories are listed once administrators publish confirmed Eduloft inventory.
                         </span>
                       )}
                     </label>
@@ -950,7 +950,7 @@ export default function StudentDashboardPage() {
                 </label>
                 <label className="flex items-start gap-3 rounded-lg border border-line p-3 text-sm text-slate-700">
                   <input name="termsAccepted" type="checkbox" required className="mt-1 h-4 w-4 rounded border-line text-brand" />
-                  <span>I have read and agree to the Josum Student Accommodation application terms, reservation process, payment rules, cancellation penalties, and house rules.</span>
+                  <span>I have read and agree that this application is subject to Eduloft staff review, verified room availability, confirmed lease terms, and approved payment instructions.</span>
                 </label>
               </section>
 
@@ -958,14 +958,14 @@ export default function StudentDashboardPage() {
                 <h3 className="text-sm font-semibold uppercase text-slate-500">Declaration and electronic signature</h3>
                 <div className="grid gap-3 text-sm leading-6 text-slate-700">
                   <p>
-                    I declare that I have read and agreed to all the terms in this Accommodation Application Form. By signing electronically, I understand and agree fully:
+                    I declare that the information supplied in this accommodation application is true and complete. By signing electronically, I understand and agree:
                   </p>
                   <ol className="grid list-decimal gap-2 pl-5">
-                    <li>This application is subject to room availability on a first come first serve basis. Only available rooms will be offered to students.</li>
-                    <li>Students may be moved to other rooms if the unit is not fully occupied for cost effectiveness, and any room price difference must be paid by the student.</li>
-                    <li>The minimum term of the Student Accommodation Agreement is 10 months or a period ending November each year.</li>
-                    <li>Cancellation may result in one month rental, application fee and administration fee being charged before signing, or 25% of the remainder of the contract during the year.</li>
-                    <li>The deposit is refundable after the tenancy period if the room is returned in the same condition as occupation started.</li>
+                    <li>This submission is an application and does not guarantee accommodation until Eduloft confirms availability and issues the applicable lease or booking terms.</li>
+                    <li>Published room category rates are captured for intake guidance and may be updated by Eduloft before final approval.</li>
+                    <li>Students must provide accurate academic, funding, identity, guardian, and contact information before the application can be reviewed.</li>
+                    <li>Payment, deposit, cancellation, move-in, and house-rule obligations must be confirmed in Eduloft-approved documents before acceptance.</li>
+                    <li>Eduloft staff may request additional documents or clarification before assigning a room.</li>
                   </ol>
                 </div>
                 <div className="grid gap-4 md:grid-cols-2">
@@ -1350,7 +1350,7 @@ export default function StudentDashboardPage() {
                   className="mt-1 h-4 w-4 rounded border-amber-300 text-brand"
                 />
                 <span>
-                  Storage services are only offered to students residing at Josum for the academic year. Retrieving belongings before moving out may carry a monthly fee of R 4 100 for the storage period.
+                  Storage is an optional operational workflow retained for Eduloft staff review. Fees, collection windows, storage availability, and release rules must be confirmed by Eduloft management before use.
                 </span>
               </label>
               <label className="grid gap-1 text-sm font-medium text-ink">
@@ -1907,8 +1907,7 @@ function formatEnum(value: string) {
 
 function storageSiteValue(name?: string | null) {
   const normalized = name?.toLowerCase() ?? '';
-  if (normalized.includes('two') || normalized.includes('2')) return 'JOSUM_TWO';
-  if (normalized.includes('one') || normalized.includes('1')) return 'JOSUM_ONE';
+  if (normalized.includes('eduloft') || normalized.includes('centurion')) return EDULOFT_STORAGE_SITE;
   return '';
 }
 

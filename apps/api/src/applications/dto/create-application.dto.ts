@@ -19,7 +19,7 @@ const signatureDataUrlPattern = /^data:image\/(png|jpeg);base64,[A-Za-z0-9+/=]+$
 export class CreateApplicationDto {
   @ApiProperty()
   @IsBoolean()
-  @Equals(true, { message: 'Only NWU Vaal Triangle students may continue with this application' })
+  @Equals(true, { message: 'Only accepted or registered students near Eduloft may continue with this application' })
   isNwuStudent: boolean;
 
   @ApiProperty()

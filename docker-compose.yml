@@ -3,15 +3,15 @@ services:
     image: postgres:16-alpine
     restart: unless-stopped
     environment:
-      POSTGRES_DB: ${POSTGRES_DB:-louiseville_accommodation}
-      POSTGRES_USER: ${POSTGRES_USER:-louiseville}
+      POSTGRES_DB: ${POSTGRES_DB:-eduloft_accommodation}
+      POSTGRES_USER: ${POSTGRES_USER:-eduloft}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-change-me}
     ports:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-louiseville} -d ${POSTGRES_DB:-louiseville_accommodation}"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-eduloft} -d ${POSTGRES_DB:-eduloft_accommodation}"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -31,7 +31,7 @@ services:
     env_file:
       - ${ENV_FILE:-.env}
     environment:
-      DATABASE_URL: ${DATABASE_URL:-postgresql://louiseville:change-me@postgres:5432/louiseville_accommodation?schema=public}
+      DATABASE_URL: ${DATABASE_URL:-postgresql://eduloft:change-me@postgres:5432/eduloft_accommodation?schema=public}
       API_PORT: 4000
       LOCAL_STORAGE_PATH: /app/uploads
     depends_on:

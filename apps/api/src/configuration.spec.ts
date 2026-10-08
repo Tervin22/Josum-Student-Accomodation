@@ -3,7 +3,7 @@ import { validateEnvironment } from './configuration';
 const strongSecret = (char: string) => char.repeat(40);
 
 const developmentConfig = {
-  DATABASE_URL: 'postgresql://josum:josum@localhost:5432/josum',
+  DATABASE_URL: 'postgresql://eduloft:eduloft@localhost:5432/eduloft',
   JWT_ACCESS_SECRET: strongSecret('a'),
   JWT_REFRESH_SECRET: strongSecret('b'),
   PUBLIC_APP_URL: 'http://localhost:3000',
@@ -23,9 +23,9 @@ const productionConfig = {
   PUBLIC_APP_URL: 'https://portal.example.com',
   WEB_ORIGIN: 'https://portal.example.com,https://admin.example.com',
   SMTP_HOST: 'smtp.example.com',
-  SMTP_FROM: 'Josum <noreply@example.com>',
+  SMTP_FROM: 'Eduloft <noreply@example.com>',
   STORAGE_DRIVER: 's3',
-  S3_BUCKET: 'josum-documents',
+  S3_BUCKET: 'eduloft-documents',
   S3_REGION: 'af-south-1',
   S3_ACCESS_KEY_ID: 'access-key',
   S3_SECRET_ACCESS_KEY: 'secret-key',
@@ -70,7 +70,7 @@ describe('validateEnvironment', () => {
       NODE_ENV: 'production',
       STORAGE_DRIVER: 's3',
       SMTP_HOST: 'smtp.example.com',
-      S3_BUCKET: 'josum-documents',
+      S3_BUCKET: 'eduloft-documents',
     });
   });
 
@@ -147,7 +147,7 @@ describe('validateEnvironment', () => {
       NODE_ENV: 'production',
       STORAGE_DRIVER: 's3',
       S3_USE_IAM_ROLE: true,
-      S3_BUCKET: 'josum-documents',
+      S3_BUCKET: 'eduloft-documents',
     });
   });
 

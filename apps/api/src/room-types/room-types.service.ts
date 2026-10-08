@@ -5,7 +5,12 @@ import { AuditService } from '../audit/audit.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { UpdateRoomTypeDto } from './dto/update-room-type.dto';
 
-const DEFAULT_ROOM_TYPES = ['Single Room'];
+const DEFAULT_ROOM_TYPES = [
+  'The Nook - 1 bed, 1 bath',
+  'The Studio - 2 bed, 1 bath',
+  'The Quarter - 1 bed, 1 bath',
+  'The Loft - 1 bed, 1 bath',
+];
 
 @Injectable()
 export class RoomTypesService {
@@ -17,7 +22,7 @@ export class RoomTypesService {
 
   async listRoomTypes() {
     await this.ensureDefaultRoomTypes();
-    await this.syncSingleRoomInventory();
+    await this.syncDefaultRoomInventory();
     return this.prisma.roomType.findMany({
       where: { roomTypeName: { in: DEFAULT_ROOM_TYPES } },
       orderBy: { roomTypeName: 'asc' },
@@ -37,11 +42,13 @@ export class RoomTypesService {
 
     this.assertRoomUpdatePasscode(dto.passcode);
 
-    const totalRooms = await this.prisma.residenceRoom.count();
+    const totalRooms = await this.prisma.residenceRoom.count({ where: { roomTypeName: current.roomTypeName } });
     if (dto.totalRooms !== totalRooms) {
       throw new BadRequestException('Room totals are determined by the numbered room inventory');
     }
-    const availableRooms = await this.prisma.residenceRoom.count({ where: { status: 'AVAILABLE' } });
+    const availableRooms = await this.prisma.residenceRoom.count({
+      where: { roomTypeName: current.roomTypeName, status: 'AVAILABLE' },
+    });
 
     const roomType = await this.prisma.roomType.update({
       where: { id },
@@ -86,15 +93,19 @@ export class RoomTypesService {
     });
   }
 
-  private async syncSingleRoomInventory() {
-    const [totalRooms, availableRooms] = await Promise.all([
-      this.prisma.residenceRoom.count(),
-      this.prisma.residenceRoom.count({ where: { status: 'AVAILABLE' } }),
-    ]);
-    await this.prisma.roomType.update({
-      where: { roomTypeName: 'Single Room' },
-      data: { totalRooms, availableRooms },
-    });
+  private async syncDefaultRoomInventory() {
+    await Promise.all(
+      DEFAULT_ROOM_TYPES.map(async (roomTypeName) => {
+        const [totalRooms, availableRooms] = await Promise.all([
+          this.prisma.residenceRoom.count({ where: { roomTypeName } }),
+          this.prisma.residenceRoom.count({ where: { roomTypeName, status: 'AVAILABLE' } }),
+        ]);
+        await this.prisma.roomType.update({
+          where: { roomTypeName },
+          data: { totalRooms, availableRooms },
+        });
+      }),
+    );
   }
 
   private assertRoomUpdatePasscode(passcode: string) {

@@ -345,10 +345,10 @@ export default function AdminDashboardPage() {
 
     selectTabFromLocation();
     window.addEventListener('popstate', selectTabFromLocation);
-    window.addEventListener('josum:set-dashboard-tab', handleDashboardTab);
+    window.addEventListener('eduloft:set-dashboard-tab', handleDashboardTab);
     return () => {
       window.removeEventListener('popstate', selectTabFromLocation);
-      window.removeEventListener('josum:set-dashboard-tab', handleDashboardTab);
+      window.removeEventListener('eduloft:set-dashboard-tab', handleDashboardTab);
     };
   }, []);
 
@@ -1638,8 +1638,8 @@ export default function AdminDashboardPage() {
           </div>
           <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-b border-line py-3">
             <div>
-              <p className="font-semibold text-ink">Single Room</p>
-              <p className="mt-1 text-sm text-slate-500">The only room category at Josum 1 and Josum 2.</p>
+              <p className="font-semibold text-ink">Eduloft room categories</p>
+              <p className="mt-1 text-sm text-slate-500">Eduloft room categories are managed after confirmed room inventory is configured.</p>
             </div>
             <p className="text-sm font-medium text-ink">
               {stats?.availableRooms ?? 0} of {stats?.totalRooms ?? 0} available
@@ -2055,7 +2055,7 @@ function ApplicationDetailsModal({ application, onClose }: { application: Applic
               <DetailField label="Assigned / preferred room" value={application.room ? `${application.room.name} - ${application.room.status}` : 'Not assigned'} />
               <DetailField label="Room required" value={application.roomType?.roomTypeName} />
               <DetailField label="Residence availability" value={application.residence ? `${application.residence.availableRooms} of ${application.residence.totalRooms}` : undefined} />
-              <DetailField label="NWU Vaal student" value={application.isNwuStudent ? 'Yes' : 'No'} />
+              <DetailField label="Accepted or registered student" value={application.isNwuStudent ? 'Yes' : 'No'} />
               <DetailField label="Year of study" value={application.studyYear} />
               <DetailField label="Semester" value={application.studySemester} />
               <DetailField label="Applicant type" value={application.returningStudent ? 'Returning student' : 'New student'} />

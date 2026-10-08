@@ -27,8 +27,8 @@ const activeStudent = {
       fundingType: 'Self Funding',
       studentIdNumber: '0001015009087',
       studentNumber: 'STU-001',
-      residence: { id: 'residence-1', name: 'Josum 1', address: 'Address', totalRooms: 10 },
-      roomType: { id: 'room-type-1', roomTypeName: 'Single Room', totalRooms: 10 },
+      residence: { id: 'residence-1', name: 'Eduloft Centurion', address: 'Address', totalRooms: 10 },
+      roomType: { id: 'room-type-1', roomTypeName: 'The Nook - 1 bed, 1 bath', totalRooms: 10 },
       room: { id: 'room-1', name: 'Room 1', status: 'OCCUPIED' },
     },
   ],
@@ -197,7 +197,7 @@ describe('UsersService stay termination', () => {
       'student-stay-terminated',
       expect.objectContaining({
         terminationReason: 'Repeated non-payment',
-        residenceName: 'Josum 1',
+        residenceName: 'Eduloft Centurion',
         roomName: 'Room 1',
       }),
     );

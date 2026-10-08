@@ -2,7 +2,7 @@
   "name": "@josum/api",
   "version": "1.0.0",
   "private": true,
-  "description": "NestJS API for Josum Student Accommodation.",
+  "description": "NestJS API for Eduloft Student Accommodation.",
   "scripts": {
     "dev": "nest start",
     "dev:watch": "nest start --watch",

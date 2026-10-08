@@ -115,6 +115,9 @@ export class ApplicationsService {
       if (selectedRoom.genderAllocation !== dto.gender) {
         throw new ConflictException(`${selectedRoom.name} is allocated to ${selectedRoom.genderAllocation.toLowerCase()} students`);
       }
+      if (selectedRoom.roomTypeName !== roomType.roomTypeName) {
+        throw new ConflictException(`${selectedRoom.name} is not configured as ${roomType.roomTypeName}`);
+      }
     }
     if (duplicateApplication) {
       throw new ConflictException(
@@ -329,7 +332,7 @@ export class ApplicationsService {
     await this.expireApprovalOffers();
     const before = await this.prisma.application.findUnique({
       where: { id },
-      include: { user: true, residence: true, room: true, documents: true },
+      include: { user: true, residence: true, roomType: true, room: true, documents: true },
     });
     if (!before) {
       throw new NotFoundException('Application not found');
@@ -375,6 +378,9 @@ export class ApplicationsService {
         }
         if (targetRoom.genderAllocation !== before.gender) {
           throw new ConflictException(`Assigned room is allocated to ${targetRoom.genderAllocation.toLowerCase()} students`);
+        }
+        if (targetRoom.roomTypeName !== before.roomType.roomTypeName) {
+          throw new ConflictException(`Assigned room must be configured as ${before.roomType.roomTypeName}`);
         }
       }
 

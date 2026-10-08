@@ -56,10 +56,10 @@ export default function LoginPage() {
 
     applyQueryState();
     window.addEventListener('popstate', applyQueryState);
-    window.addEventListener('josum:open-login-portal', handleLoginPortal);
+    window.addEventListener('eduloft:open-login-portal', handleLoginPortal);
     return () => {
       window.removeEventListener('popstate', applyQueryState);
-      window.removeEventListener('josum:open-login-portal', handleLoginPortal);
+      window.removeEventListener('eduloft:open-login-portal', handleLoginPortal);
     };
   }, [toast]);
 
@@ -179,10 +179,12 @@ export default function LoginPage() {
       <header className="absolute inset-x-0 top-0 z-20 border-b border-white/15 bg-ink/30 backdrop-blur">
         <div className="mx-auto flex max-w-7xl items-center justify-between gap-3 px-3 py-3 sm:px-4 sm:py-4">
           <div className="flex min-w-0 max-w-[50%] items-center gap-3 sm:max-w-none">
-            <Image src={BRAND_LOGO_URL} alt={BRAND_NAME} width={160} height={44} className="h-11 w-24 shrink-0 object-contain object-left sm:w-32" />
+            <span className="rounded-md bg-white/95 px-2 py-1">
+              <Image src={BRAND_LOGO_URL} alt={BRAND_NAME} width={160} height={44} className="h-11 w-24 shrink-0 object-contain object-left sm:w-32" />
+            </span>
             <div className="min-w-0">
               <p className="truncate text-sm font-bold tracking-wide">{BRAND_NAME}</p>
-              <p className="truncate text-xs text-white/70">Bedworth Park, Vereeniging</p>
+              <p className="truncate text-xs text-white/70">Eco Park, Centurion</p>
             </div>
           </div>
           <nav className="flex shrink-0 items-center gap-2">
@@ -216,19 +218,19 @@ export default function LoginPage() {
         <div className="max-w-3xl">
           <div className="inline-flex items-center gap-2 rounded-full border border-white/25 bg-white/10 px-3 py-1 text-sm font-medium text-white/90 backdrop-blur">
             <MapPin className="h-4 w-4" />
-            Bedworth Park student accommodation
+            Eco Park, Centurion student accommodation
           </div>
           <h1 className="mt-6 max-w-[18rem] break-words text-3xl font-bold leading-tight min-[420px]:max-w-3xl sm:text-5xl lg:text-6xl">
-            Live, learn, and prosper at Josum.
+            Student living, elevated at Eduloft.
           </h1>
           <p className="mt-5 max-w-[20rem] break-words text-base leading-7 text-white/82 min-[420px]:max-w-2xl sm:text-lg">
-            Choose between Josum 1 and Josum 2, apply online, upload your documents, and follow every application update in one place.
+            Explore verified room categories, apply online, upload your documents, and track every application update in one place.
           </p>
           <div className="mt-8 grid gap-3 sm:flex sm:flex-wrap">
             <button
               type="button"
               onClick={() => openPortal('student')}
-              className="focus-ring inline-flex h-12 w-full items-center justify-center gap-2 rounded-lg bg-brand px-5 text-sm font-bold text-white shadow-lg shadow-black/20 hover:bg-teal-700 sm:w-auto"
+              className="focus-ring inline-flex h-12 w-full items-center justify-center gap-2 rounded-lg bg-brand px-5 text-sm font-bold text-ink shadow-lg shadow-black/20 hover:bg-amber-400 sm:w-auto"
             >
               Student Login
               <ArrowRight className="h-4 w-4" />
@@ -237,7 +239,7 @@ export default function LoginPage() {
               href="/residences"
               className="focus-ring inline-flex h-12 w-full items-center justify-center gap-2 rounded-lg border border-white/40 bg-white/10 px-5 text-sm font-bold text-white backdrop-blur hover:bg-white/20 sm:w-auto"
             >
-              Explore residences
+              Explore rooms
               <Building2 className="h-4 w-4" />
             </Link>
             <button
@@ -253,12 +255,12 @@ export default function LoginPage() {
 
         <div className="mt-10 grid gap-3 text-sm text-white/90 sm:mt-12 sm:grid-cols-3">
           {[
-            ['Two residences, one application', 'Compare Josum 1 and Josum 2 before choosing where to apply.'],
-            ['Digital documents', 'Students can attach supporting files to applications.'],
-            ['Status notifications', 'Applicants receive email updates as applications move.'],
+            ['Four advertised room types', 'Choose The Nook, Studio, Quarter, or Loft as your preferred category.'],
+            ['Digital documents', 'Attach student ID, funding, guardian, and academic support files.'],
+            ['Staff-managed allocation', 'Eduloft staff review applications and assign confirmed room inventory.'],
           ].map(([title, body]) => (
             <div key={title} className="rounded-lg border border-white/18 bg-white/10 p-4 backdrop-blur">
-              <CheckCircle2 className="h-5 w-5 text-teal-200" />
+              <CheckCircle2 className="h-5 w-5 text-brand" />
               <p className="mt-3 font-semibold text-white">{title}</p>
               <p className="mt-1 leading-6 text-white/75">{body}</p>
             </div>
@@ -271,7 +273,7 @@ export default function LoginPage() {
           <section className="max-h-[calc(100dvh-2rem)] w-full max-w-xl overflow-y-auto rounded-lg border border-white/30 bg-white p-4 text-ink shadow-2xl sm:max-h-[92vh] sm:p-6">
             <div className="flex items-start justify-between gap-4">
               <div className="flex min-w-0 items-center gap-3">
-                <div className="grid h-12 w-12 place-items-center rounded-lg bg-teal-50 text-brand">
+                <div className="grid h-12 w-12 place-items-center rounded-lg bg-amber-50 text-brand">
                   {activePortal === 'student' ? <GraduationCap className="h-6 w-6" /> : <ShieldCheck className="h-6 w-6" />}
                 </div>
                 <div className="min-w-0">
@@ -303,7 +305,7 @@ export default function LoginPage() {
                   </label>
                   <button
                     disabled={loading}
-                    className="focus-ring inline-flex h-11 w-full items-center justify-center gap-2 rounded-lg bg-brand px-4 text-sm font-semibold text-white hover:bg-teal-700 disabled:opacity-60"
+                    className="focus-ring inline-flex h-11 w-full items-center justify-center gap-2 rounded-lg bg-brand px-4 text-sm font-semibold text-ink hover:bg-amber-400 disabled:opacity-60"
                   >
                     <LogIn className="h-4 w-4" />
                     Sign in
@@ -370,7 +372,7 @@ export default function LoginPage() {
 
             {activePortal === 'admin' && staffRegisterOpen && (
               <form onSubmit={registerStaff} className="mt-6 grid gap-4">
-                <div className="rounded-lg border border-teal-200 bg-teal-50 p-3 text-sm text-teal-950">
+                <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-950">
                   Staff accounts require the matching registration key configured by the system owner.
                 </div>
                 <div className="grid gap-4 sm:grid-cols-2">

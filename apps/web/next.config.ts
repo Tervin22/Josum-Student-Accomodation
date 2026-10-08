@@ -11,7 +11,7 @@ const contentSecurityPolicy = [
   "frame-ancestors 'none'",
   "object-src 'none'",
   "form-action 'self'",
-  "img-src 'self' data: blob: https://josumres.co.za",
+  "img-src 'self' data: blob: https://eduloft.co.za",
   "style-src 'self' 'unsafe-inline'",
   isProduction ? "script-src 'self' 'unsafe-inline'" : "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
   isProduction
@@ -29,7 +29,7 @@ const nextConfig = (phase: string): NextConfig => {
       ignoreDuringBuilds: true,
     },
     images: {
-      remotePatterns: [{ protocol: 'https', hostname: 'josumres.co.za' }],
+      remotePatterns: [{ protocol: 'https', hostname: 'eduloft.co.za' }],
     },
     async headers() {
       const headers = [

@@ -399,7 +399,7 @@ model PaymentReminder {
   user          User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
   periodYear    Int
   periodMonth   Int
-  amountCents   Int                   @default(510000)
+  amountCents   Int                   @default(0)
   status        PaymentReminderStatus @default(PENDING)
   recipient     String
   emailLogId    String?               @db.Uuid

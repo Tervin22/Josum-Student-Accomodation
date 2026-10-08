@@ -29,7 +29,7 @@ export class ReportsController {
     @Res({ passthrough: true }) response: Response,
   ) {
     const body = await this.reports.financeExport(user.sub, query);
-    const filename = `josum-finance-report-${new Date().toISOString().slice(0, 10)}.csv`;
+    const filename = `eduloft-finance-report-${new Date().toISOString().slice(0, 10)}.csv`;
     response.set({
       'Content-Type': 'text/csv; charset=utf-8',
       'Content-Disposition': `attachment; filename="${filename}"; filename*=UTF-8''${encodeURIComponent(filename)}`,

@@ -2,57 +2,49 @@ import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
-const sharedAmenities = [
-  'Backup power supply',
-  'Backup power for Wi-Fi',
-  'Fully equipped gas stoves',
-  'Cleaning and caretaking staff',
-  'Complimentary shuttle service for residents',
-  'Study lounges and quiet areas',
-  'Backup water supply',
-  'Unlimited hot water with gas-powered geysers',
-  'On-site laundry facilities',
-  'Reliable 24-hour security',
-  'Fully furnished rooms',
-  'Recreational spaces',
-  'Regular social events and activities',
+const eduloftAmenities = [
+  'Private student rooms',
+  'Facial biometric access control',
+  '24-hour security',
+  'CCTV surveillance and analytics',
+  'Free internet connectivity',
+  'Smart metering',
+  'Serviced laundromat',
+  'Generator support for essential services',
+  'Bed and mattress',
+  'Fridge, kettle, microwave, and TV in advertised room categories',
+];
+
+const eduloftFacilities = [
+  'On-site reception',
+  'Student living apartments',
+  'Shared lounge areas',
+  'Study hall and clubhouse planned with phase 2',
+  'Laundry services',
+  'Access-controlled guardhouse',
+];
+
+const roomTypes = [
+  { roomTypeName: 'The Nook - 1 bed, 1 bath', totalRooms: 0, availableRooms: 0 },
+  { roomTypeName: 'The Studio - 2 bed, 1 bath', totalRooms: 0, availableRooms: 0 },
+  { roomTypeName: 'The Quarter - 1 bed, 1 bath', totalRooms: 0, availableRooms: 0 },
+  { roomTypeName: 'The Loft - 1 bed, 1 bath', totalRooms: 0, availableRooms: 0 },
 ];
 
 const residences = [
   {
-    id: '11111111-1111-4111-8111-111111111101',
-    name: 'Josum 1',
-    address: '50 Cassandra Avenue, Bedworth Park, Vereeniging',
-    residenceType: 'Mixed - boys and girls',
-    totalRooms: 78,
-    availableRooms: 78,
+    id: '22222222-2222-4222-8222-222222222201',
+    name: 'Eduloft Centurion',
+    address: 'Eco Park, Centurion, Gauteng',
+    residenceType: 'Student apartments',
+    totalRooms: 0,
+    availableRooms: 0,
     description:
-      'A welcoming mixed residence with furnished single rooms, dedicated study areas, communal living spaces, and reliable support services.',
-    facilities: ['4 communal bathrooms', '3 communal kitchens', '2 TV rooms', '1 laundry room', '1 study room'],
-    amenities: sharedAmenities,
-    distanceToNWU: 3.6,
-    distanceToShoppingCentre: 0.6,
-  },
-  {
-    id: '11111111-1111-4111-8111-111111111102',
-    name: 'Josum 2',
-    address: '3 Ganymede Avenue, Bedworth Park, Vereeniging',
-    residenceType: 'Girls only',
-    totalRooms: 120,
-    availableRooms: 120,
-    description:
-      'A secure girls-only residence with furnished single rooms, generous shared facilities, quiet study areas, and a multipurpose community space.',
-    facilities: [
-      '4 communal bathrooms',
-      '4 communal kitchens',
-      '2 TV rooms',
-      '1 laundry room',
-      '1 study room',
-      '1 multipurpose room',
-    ],
-    amenities: sharedAmenities,
-    distanceToNWU: 3.1,
-    distanceToShoppingCentre: 0.95,
+      'Stylish, secure, and fully serviced student apartments in Eco Park, Centurion. Exact room and bed inventory must be configured by Eduloft administrators before approvals.',
+    facilities: eduloftFacilities,
+    amenities: eduloftAmenities,
+    distanceToNWU: 0,
+    distanceToShoppingCentre: 2.9,
   },
 ];
 
@@ -73,35 +65,21 @@ async function main() {
     });
   }
 
-  for (const residence of residences) {
-    const existing = await prisma.residence.findUnique({ where: { id: residence.id } });
-    await prisma.residence.upsert({
-      where: { id: residence.id },
-      create: residence,
-      update: {
-        ...residence,
-        availableRooms: existing?.availableRooms ?? residence.availableRooms,
-      },
+  for (const roomType of roomTypes) {
+    await prisma.roomType.upsert({
+      where: { roomTypeName: roomType.roomTypeName },
+      create: roomType,
+      update: roomType,
     });
   }
 
-  const roomSeed = residences.flatMap((residence) =>
-    Array.from({ length: residence.totalRooms }, (_, index) => {
-      const roomNumber = index + 1;
-      return {
-        residenceId: residence.id,
-        roomNumber,
-        name: `Room ${roomNumber}`,
-        genderAllocation: residence.name === 'Josum 2' || roomNumber <= 50 ? 'Female' : 'Male',
-        roomTypeName: 'Single Room',
-        capacity: 1,
-      };
-    }),
-  );
-  await prisma.residenceRoom.createMany({ data: roomSeed, skipDuplicates: true });
-  await prisma.residenceRoom.updateMany({
-    data: { roomTypeName: 'Single Room', capacity: 1 },
-  });
+  for (const residence of residences) {
+    await prisma.residence.upsert({
+      where: { id: residence.id },
+      create: residence,
+      update: residence,
+    });
+  }
 }
 
 main()

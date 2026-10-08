@@ -115,8 +115,8 @@ async function bootstrap() {
 
   if (!isProduction || config.get<string>('ENABLE_SWAGGER') === 'true') {
     const openApi = new DocumentBuilder()
-      .setTitle('Josum Student Accommodation API')
-      .setDescription('Multi-residence applications, availability, documents, notifications, and administration.')
+      .setTitle('Eduloft Student Accommodation API')
+      .setDescription('Eduloft applications, room categories, documents, notifications, and administration.')
       .setVersion('1.0.0')
       .addBearerAuth()
       .build();

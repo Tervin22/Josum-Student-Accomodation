@@ -2,7 +2,7 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Transform, Type } from 'class-transformer';
 import { IsBoolean, IsIn, IsInt, IsNotEmpty, IsOptional, IsString, Max, MaxLength, Min } from 'class-validator';
 
-export const storageSiteValues = ['JOSUM_ONE', 'JOSUM_TWO'] as const;
+export const storageSiteValues = ['EDULOFT_CENTURION'] as const;
 
 export class CreateStorageRequestDto {
   @ApiPropertyOptional()

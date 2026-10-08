@@ -1,8 +1,8 @@
 'use client';
 
 const CONFIGURED_API_URL = process.env.NEXT_PUBLIC_API_URL;
-const SESSION_STORAGE_KEY = 'josum.session';
-const LEGACY_SESSION_STORAGE_KEYS = ['louiseville.session', 'nathi.session'];
+const SESSION_STORAGE_KEY = 'eduloft.session';
+const LEGACY_SESSION_STORAGE_KEYS = ['josum.session', 'louiseville.session', 'nathi.session'];
 const SESSION_MAX_IDLE_MS = 30 * 60 * 1000;
 
 function getApiUrl() {
@@ -151,14 +151,14 @@ export async function downloadStorageFile(id: string, filename: string) {
 }
 
 export async function downloadStorageFormTemplate() {
-  return downloadAuthorized('/storage-requests/form-template', 'josum-student-storage-form.txt', 'Could not download storage form');
+  return downloadAuthorized('/storage-requests/form-template', 'eduloft-student-storage-form.txt', 'Could not download storage form');
 }
 
 export async function downloadStorageExport(query = '') {
   const suffix = query ? `?${query}` : '';
   return downloadAuthorized(
     `/storage-requests/admin/export${suffix}`,
-    `josum-storage-requests-${new Date().toISOString().slice(0, 10)}.csv`,
+    `eduloft-storage-requests-${new Date().toISOString().slice(0, 10)}.csv`,
     'Could not export storage requests',
   );
 }
@@ -167,7 +167,7 @@ export async function downloadFinanceExport(query = '') {
   const suffix = query ? `?${query}` : '';
   return downloadAuthorized(
     `/reports/finance/export${suffix}`,
-    `josum-finance-report-${new Date().toISOString().slice(0, 10)}.csv`,
+    `eduloft-finance-report-${new Date().toISOString().slice(0, 10)}.csv`,
     'Could not export finance report',
   );
 }
@@ -176,7 +176,7 @@ export async function downloadInspectionExport(query = '') {
   const suffix = query ? `?${query}` : '';
   return downloadAuthorized(
     `/inspections/export${suffix}`,
-    `josum-inspections-${new Date().toISOString().slice(0, 10)}.csv`,
+    `eduloft-inspections-${new Date().toISOString().slice(0, 10)}.csv`,
     'Could not export inspections',
   );
 }

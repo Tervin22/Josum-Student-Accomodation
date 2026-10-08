@@ -6,8 +6,8 @@ import { PrismaService } from '../prisma/prisma.service';
 
 type TemplateVariables = Record<string, string | number | null | undefined>;
 
-const defaultAppName = 'Josum Student Accommodation';
-const defaultLogoUrl = 'https://josumres.co.za/wp-content/uploads/2025/08/Josum-Company-Logo-Final-Homepage.png';
+const defaultAppName = 'Eduloft';
+const defaultLogoUrl = 'https://eduloft.co.za/wp-content/uploads/2025/07/EDULOFT-LOGO-FINAL-1024x241.png';
 
 const defaultTemplates: Record<string, { subject: string; body: string }> = {
   'account-created': {
@@ -24,7 +24,7 @@ const defaultTemplates: Record<string, { subject: string; body: string }> = {
   },
   'documents-required': {
     subject: 'Documents required for application {{referenceCode}}',
-    body: "Hello {{name}},\n\nYour accommodation application has been received, but no supporting documents have been uploaded yet.\n\nApplication reference: {{referenceCode}}\nResidence: {{residenceName}}\nAddress: {{residenceAddress}}\nStatus: Submitted\n\nPlease sign in and upload the required documents so the application can be reviewed:\n\n- Applicant's ID / Passport copy\n- 2 x Student color ID Photos\n- Student's Acceptance Letter\n- Guarantor's ID / Passport copy, pay slip, 3 Months Bank statement, and proof of address\n- Medical Aid Certificate valid until November 2024 (International students only)\n\nUpload here: {{appUrl}}\n\nKind regards,\n{{appName}}",
+    body: "Hello {{name}},\n\nYour accommodation application has been received, but supporting documents are still required.\n\nApplication reference: {{referenceCode}}\nResidence: {{residenceName}}\nAddress: {{residenceAddress}}\nStatus: Submitted\n\nPlease sign in and upload the documents needed for review:\n\n- Student ID copy\n- Proof of funding\n- Parent or guardian ID / supporting document\n- Acceptance letter or proof of registration for new students\n- Academic record for returning students where applicable\n\nUpload here: {{appUrl}}\n\nKind regards,\n{{appName}}",
   },
   'application-status-changed': {
     subject: '{{statusSubject}}',
@@ -71,8 +71,8 @@ const defaultTemplates: Record<string, { subject: string; body: string }> = {
     body: 'Hello {{name}},\n\nYour visitor pre-registration has been {{status}}.\n\nVisitor: {{visitorName}}\nExpected visit date: {{expectedVisitDate}}\nExpected arrival time: {{expectedArrivalTime}}\nResidence: {{residenceName}}\nRoom: {{roomName}}{{noteBlock}}\n\nYou can view the latest visitor status here: {{appUrl}}\n\nKind regards,\n{{appName}}',
   },
   'self-paying-payment-reminder': {
-    subject: 'Monthly accommodation payment reminder: R5100 due',
-    body: 'Hello {{name}},\n\nThis is your monthly accommodation payment reminder for {{periodLabel}}.\n\nAmount due: R5100\nResidence: {{residenceName}}\nRoom: {{roomName}}\nStudent number: {{studentNumber}}\n\nBanking details:\nAccount holder: Josum Investments (Pty) Ltd\nBank: FNB\nAccount number: 62930055042\nBranch code: 250655\nReference: {{paymentReference}}\n\nPlease make payment on or before the due date and keep proof of payment for your records.\n\nYou can sign in here: {{appUrl}}\n\nKind regards,\n{{appName}}',
+    subject: 'Monthly accommodation payment reminder',
+    body: 'Hello {{name}},\n\nThis is your monthly accommodation payment reminder for {{periodLabel}}.\n\nResidence: {{residenceName}}\nRoom: {{roomName}}\nStudent number: {{studentNumber}}\nReference: {{paymentReference}}\n\nPlease use the latest Eduloft-approved invoice or payment instruction for the amount due and banking details. Keep proof of payment for your records.\n\nYou can sign in here: {{appUrl}}\n\nKind regards,\n{{appName}}',
   },
   'student-stay-terminated': {
     subject: 'Your accommodation stay has been terminated',

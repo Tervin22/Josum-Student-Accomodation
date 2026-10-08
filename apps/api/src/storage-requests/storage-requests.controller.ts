@@ -47,7 +47,7 @@ export class StorageRequestsController {
   @Roles(RoleName.STUDENT, ...STORAGE_MANAGEMENT_ROLES)
   downloadFormTemplate(@Res({ passthrough: true }) response: Response) {
     const body = this.storageRequests.storageFormTemplate();
-    const filename = 'josum-student-storage-form.txt';
+    const filename = 'eduloft-student-storage-form.txt';
     response.set({
       'Content-Type': 'text/plain; charset=utf-8',
       'Content-Disposition': `attachment; filename="${filename}"; filename*=UTF-8''${encodeURIComponent(filename)}`,
@@ -97,7 +97,7 @@ export class StorageRequestsController {
     @Res({ passthrough: true }) response: Response,
   ) {
     const body = await this.storageRequests.exportAdminCsv(user.sub, query);
-    const filename = `josum-storage-requests-${new Date().toISOString().slice(0, 10)}.csv`;
+    const filename = `eduloft-storage-requests-${new Date().toISOString().slice(0, 10)}.csv`;
     response.set({
       'Content-Type': 'text/csv; charset=utf-8',
       'Content-Disposition': `attachment; filename="${filename}"; filename*=UTF-8''${encodeURIComponent(filename)}`,

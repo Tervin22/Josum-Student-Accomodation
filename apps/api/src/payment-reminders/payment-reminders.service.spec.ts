@@ -13,7 +13,7 @@ const application = (overrides: Record<string, unknown> = {}) => ({
     firstName: 'Student',
     lastName: 'One',
   },
-  residence: { name: 'Josum 1' },
+  residence: { name: 'Eduloft Centurion' },
   room: { name: 'Room 1' },
   ...overrides,
 });
@@ -72,7 +72,7 @@ describe('PaymentRemindersService', () => {
       'self-paying-payment-reminder',
       expect.objectContaining({
         periodLabel: 'August 2026',
-        residenceName: 'Josum 1',
+        residenceName: 'Eduloft Centurion',
         roomName: 'Room 1',
         paymentReference: 'STU-001',
       }),

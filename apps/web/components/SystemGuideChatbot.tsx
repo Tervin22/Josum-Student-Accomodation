@@ -223,7 +223,7 @@ export function SystemGuideChatbot() {
       window.history.pushState(null, '', action.href);
       if (portal === 'student' || portal === 'admin') {
         window.dispatchEvent(
-          new CustomEvent<LoginPortalEventDetail>('josum:open-login-portal', {
+          new CustomEvent<LoginPortalEventDetail>('eduloft:open-login-portal', {
             detail: { portal, bootstrap },
           }),
         );
@@ -232,7 +232,7 @@ export function SystemGuideChatbot() {
       const target = `${action.href}?tab=${encodeURIComponent(action.tab)}`;
       window.history.pushState(null, '', target);
       window.dispatchEvent(
-        new CustomEvent<DashboardTabEventDetail>('josum:set-dashboard-tab', {
+        new CustomEvent<DashboardTabEventDetail>('eduloft:set-dashboard-tab', {
           detail: { mode: action.mode, tab: action.tab },
         }),
       );
@@ -640,7 +640,7 @@ function getStaffReply(question: string, mode: StaffGuideMode): Pick<GuideMessag
     }
     return {
       text: mode === 'admin'
-        ? 'Use Applications to filter by Josum 1 or Josum 2, open a reference, review the selected residence and student documents, update the status, add a note, and save internal admin notes.'
+        ? 'Use Applications to filter Eduloft intake records, open a reference, review the selected room category and student documents, update the status, add a note, and save internal admin notes.'
         : 'Use the Manager Dashboard to review application status, document completeness, occupancy, and student-facing notes.',
       actions: [
         ...(mode === 'manager' ? [managerNavigationActions[1], managerNavigationActions[0]] : [adminNavigationActions[1], adminNavigationActions[0]]),
@@ -651,8 +651,8 @@ function getStaffReply(question: string, mode: StaffGuideMode): Pick<GuideMessag
   if (matches(question, ['room', 'rooms', 'availability', 'total', 'passcode', 'single', 'sharing'])) {
     return {
       text: mode === 'admin'
-        ? 'Use Rooms to manage every numbered room at Josum 1 and Josum 2 as Available, Reserved, Occupied, or Maintenance. Assign an available gender-compatible room before approving an application.'
-        : 'Use the Manager Dashboard to monitor room availability and residence occupancy across Josum 1 and Josum 2.',
+        ? 'Use Rooms to manage confirmed Eduloft room inventory as Available, Reserved, Occupied, or Maintenance. Assign an available room before approving an application.'
+        : 'Use the Manager Dashboard to monitor Eduloft room availability and occupancy.',
       actions: mode === 'manager' ? [managerNavigationActions[0]] : [adminNavigationActions[3]],
     };
   }
@@ -728,7 +728,7 @@ function getStaffReply(question: string, mode: StaffGuideMode): Pick<GuideMessag
 
 function getStudentTourReply(): Pick<GuideMessage, 'text' | 'actions'> {
   return {
-    text: 'Student path:\n1. Explore Josum 1 and Josum 2, then create an account or sign in.\n2. Check Profile and complete missing details.\n3. Open Apply, select a residence, review the rates and terms, then submit the form.\n4. Upload required documents.\n5. Track status from Overview and use Maintenance for residence issues.',
+    text: 'Student path:\n1. Explore Eduloft room categories, then create an account or sign in.\n2. Check Profile and complete missing details.\n3. Open Apply, select Eduloft Centurion, review the current intake notes, then submit the form.\n4. Upload required documents.\n5. Track status from Overview and use Maintenance for residence issues.',
     actions: [
       ...publicNavigationActions.slice(0, 2),
       studentNavigationActions[4],

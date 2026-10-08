@@ -60,7 +60,7 @@ export class InspectionsController {
     @Res({ passthrough: true }) response: Response,
   ) {
     const body = await this.inspections.exportCsv(user.sub, query);
-    const filename = `josum-inspections-${new Date().toISOString().slice(0, 10)}.csv`;
+    const filename = `eduloft-inspections-${new Date().toISOString().slice(0, 10)}.csv`;
     response.set({
       'Content-Type': 'text/csv; charset=utf-8',
       'Content-Disposition': `attachment; filename="${filename}"; filename*=UTF-8''${encodeURIComponent(filename)}`,
