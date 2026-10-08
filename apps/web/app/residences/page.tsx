@@ -80,7 +80,7 @@ export default function ResidencesPage() {
             width={1100}
             height={620}
             priority
-            className="aspect-[16/10] w-full rounded-lg object-cover shadow-soft"
+            className="aspect-[16/10] w-full rounded-lg bg-slate-100 object-contain shadow-soft"
           />
         </div>
       </section>
@@ -100,7 +100,7 @@ export default function ResidencesPage() {
         <div className="mt-6 grid gap-6 sm:grid-cols-2 xl:grid-cols-4">
           {EDULOFT_ROOM_OPTIONS.map((room) => (
             <article key={room.name} className="overflow-hidden rounded-lg border border-line bg-white shadow-sm">
-              <Image src={room.image} alt={`${room.name} apartment`} width={760} height={520} className="aspect-[4/3] w-full object-cover" />
+              <Image src={room.image} alt={`${room.name} apartment`} width={760} height={520} className="aspect-[4/3] w-full bg-slate-100 object-contain" />
               <div className="p-4">
                 <div className="flex items-start justify-between gap-3">
                   <div>

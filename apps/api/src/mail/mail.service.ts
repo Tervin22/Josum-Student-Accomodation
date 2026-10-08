@@ -4,12 +4,12 @@ import { createTransport, Transporter } from 'nodemailer';
 import { randomUUID } from 'crypto';
 import { PrismaService } from '../prisma/prisma.service';
 
-type TemplateVariables = Record<string, string | number | null | undefined>;
+export type TemplateVariables = Record<string, string | number | null | undefined>;
 
-const defaultAppName = 'Eduloft';
-const defaultLogoUrl = 'https://eduloft.co.za/wp-content/uploads/2025/07/EDULOFT-LOGO-FINAL-1024x241.png';
+export const defaultAppName = 'Eduloft';
+export const defaultLogoUrl = 'https://eduloft.co.za/wp-content/uploads/2025/07/EDULOFT-LOGO-FINAL-1024x241.png';
 
-const defaultTemplates: Record<string, { subject: string; body: string }> = {
+export const defaultEmailTemplates: Record<string, { subject: string; body: string }> = {
   'account-created': {
     subject: 'Your {{appName}} account is ready',
     body: 'Hello {{name}},\n\nYour {{role}} account has been created successfully.\n\nSign in here: {{appUrl}}',
@@ -111,7 +111,7 @@ export class MailService {
     const databaseTemplate = await this.prisma.emailTemplate.findUnique({
       where: { key: templateKey },
     });
-    const template = databaseTemplate?.enabled ? databaseTemplate : defaultTemplates[templateKey];
+    const template = databaseTemplate?.enabled ? databaseTemplate : defaultEmailTemplates[templateKey];
     if (!template) {
       throw new Error(`Email template not found: ${templateKey}`);
     }
@@ -179,7 +179,10 @@ export class MailService {
   }
 
   private logoUrl() {
-    return this.config.get<string>('BRAND_LOGO_URL') ?? defaultLogoUrl;
+    const configuredLogo = this.config.get<string>('BRAND_LOGO_URL')?.trim();
+    if (configuredLogo) return configuredLogo;
+    const appUrl = this.config.get<string>('PUBLIC_APP_URL')?.trim().replace(/\/$/, '');
+    return appUrl ? `${appUrl}/eduloft/eduloft-logo.png` : defaultLogoUrl;
   }
 
   private toStringList(value: unknown[] | undefined) {
@@ -200,12 +203,12 @@ export class MailService {
       <div style="margin:0;padding:24px;background:#f6f8fb;font-family:Arial,Helvetica,sans-serif;color:#172033;">
         <div style="max-width:600px;margin:0 auto;background:#ffffff;border:1px solid #dde5ef;border-radius:10px;padding:24px;">
           <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px;">
-            <img src="${this.escapeHtml(this.logoUrl())}" alt="${this.escapeHtml(this.appName())}" width="72" style="display:block;max-width:72px;height:auto;border:0;" />
+            <img src="${this.escapeHtml(this.logoUrl())}" alt="${this.escapeHtml(this.appName())}" width="132" style="display:block;width:132px;max-width:132px;height:auto;border:0;" />
             <div style="font-size:18px;font-weight:700;color:#172033;">${this.escapeHtml(this.appName())}</div>
           </div>
           <div style="font-size:15px;line-height:1.55;color:#27364a;">${body}</div>
           <div style="margin-top:24px;padding-top:16px;border-top:1px solid #e5edf5;font-size:12px;color:#667085;">
-            <img src="${this.escapeHtml(this.logoUrl())}" alt="${this.escapeHtml(this.appName())}" width="96" style="display:block;max-width:96px;height:auto;border:0;margin-bottom:8px;" />
+            <img src="${this.escapeHtml(this.logoUrl())}" alt="${this.escapeHtml(this.appName())}" width="132" style="display:block;width:132px;max-width:132px;height:auto;border:0;margin-bottom:8px;" />
             ${this.escapeHtml(this.appName())}<br />
             This is an automated system notification.
           </div>

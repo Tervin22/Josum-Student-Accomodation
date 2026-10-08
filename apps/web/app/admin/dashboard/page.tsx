@@ -49,7 +49,17 @@ type Stats = {
   statuses: Record<string, number>;
 };
 type Setting = { id: string; key: string; value: unknown; description?: string };
-type Template = { id: string; key: string; subject: string; body: string; enabled: boolean };
+type Template = {
+  id: string;
+  key: string;
+  subject: string;
+  body: string;
+  enabled: boolean;
+  source?: 'default' | 'custom';
+  isCustomized?: boolean;
+  placeholders?: string[];
+  updatedAt?: string | null;
+};
 type AuditLog = {
   id: string;
   action: string;
@@ -162,6 +172,7 @@ export default function AdminDashboardPage() {
   const [roomTypes, setRoomTypes] = useState<RoomType[]>([]);
   const [settings, setSettings] = useState<Setting[]>([]);
   const [templates, setTemplates] = useState<Template[]>([]);
+  const [templateDraft, setTemplateDraft] = useState({ key: '', subject: '', body: '', enabled: true });
   const [audit, setAudit] = useState<Paginated<AuditLog>>({ items: [], total: 0, page: 1, limit: 50 });
   const [applicationSearch, setApplicationSearch] = useState('');
   const [applicationStatus, setApplicationStatus] = useState('');
@@ -553,24 +564,34 @@ export default function AdminDashboardPage() {
 
   async function upsertTemplate(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const formElement = event.currentTarget;
-    const form = new FormData(formElement);
     try {
       await api('/settings/email-templates', {
         method: 'PUT',
         body: JSON.stringify({
-          key: form.get('key'),
-          subject: form.get('subject'),
-          body: form.get('body'),
-          enabled: form.get('enabled') === 'on',
+          key: templateDraft.key,
+          subject: templateDraft.subject,
+          body: templateDraft.body,
+          enabled: templateDraft.enabled,
         }),
       });
       toast.success('Template saved');
-      formElement.reset();
       await load();
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Could not save template');
     }
+  }
+
+  function editTemplate(template: Template) {
+    setTemplateDraft({
+      key: template.key,
+      subject: template.subject,
+      body: template.body,
+      enabled: template.enabled,
+    });
+  }
+
+  function clearTemplateDraft() {
+    setTemplateDraft({ key: '', subject: '', body: '', enabled: true });
   }
 
   async function deleteSetting(key: string) {
@@ -587,6 +608,7 @@ export default function AdminDashboardPage() {
     try {
       await api(`/settings/email-templates/${encodeURIComponent(key)}`, { method: 'DELETE' });
       toast.success('Template deleted');
+      if (templateDraft.key === key) clearTemplateDraft();
       await load();
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Could not delete template');
@@ -1989,14 +2011,55 @@ export default function AdminDashboardPage() {
           <form onSubmit={upsertTemplate} className="rounded-lg border border-line bg-white p-4 shadow-sm">
             <h2 className="font-semibold text-ink">Email template</h2>
             <div className="mt-4 grid gap-3">
-              <input name="key" placeholder="Template key" required className="focus-ring rounded-lg border border-line px-3 py-2" />
-              <input name="subject" placeholder="Subject" required className="focus-ring rounded-lg border border-line px-3 py-2" />
-              <textarea name="body" rows={8} placeholder="Body" required className="focus-ring rounded-lg border border-line px-3 py-2" />
+              <input
+                name="key"
+                placeholder="Template key"
+                required
+                value={templateDraft.key}
+                onChange={(event) => setTemplateDraft((draft) => ({ ...draft, key: event.target.value }))}
+                className="focus-ring rounded-lg border border-line px-3 py-2"
+              />
+              <input
+                name="subject"
+                placeholder="Subject"
+                required
+                value={templateDraft.subject}
+                onChange={(event) => setTemplateDraft((draft) => ({ ...draft, subject: event.target.value }))}
+                className="focus-ring rounded-lg border border-line px-3 py-2"
+              />
+              <textarea
+                name="body"
+                rows={10}
+                placeholder="Body"
+                required
+                value={templateDraft.body}
+                onChange={(event) => setTemplateDraft((draft) => ({ ...draft, body: event.target.value }))}
+                className="focus-ring rounded-lg border border-line px-3 py-2"
+              />
               <label className="flex items-center gap-2 text-sm font-medium">
-                <input name="enabled" type="checkbox" defaultChecked className="h-4 w-4 rounded border-line text-brand" />
+                <input
+                  name="enabled"
+                  type="checkbox"
+                  checked={templateDraft.enabled}
+                  onChange={(event) => setTemplateDraft((draft) => ({ ...draft, enabled: event.target.checked }))}
+                  className="h-4 w-4 rounded border-line text-brand"
+                />
                 Enabled
               </label>
-              <button className="focus-ring rounded-lg bg-brand px-4 py-2.5 text-sm font-semibold text-white">Save template</button>
+              <div className="flex flex-wrap gap-2">
+                <button className="focus-ring inline-flex items-center gap-2 rounded-lg bg-brand px-4 py-2.5 text-sm font-semibold text-white">
+                  <Save className="h-4 w-4" />
+                  Save template
+                </button>
+                <button
+                  type="button"
+                  onClick={clearTemplateDraft}
+                  className="focus-ring inline-flex items-center gap-2 rounded-lg border border-line px-4 py-2.5 text-sm font-semibold text-slate-600 hover:bg-slate-50"
+                >
+                  <X className="h-4 w-4" />
+                  Clear
+                </button>
+              </div>
             </div>
           </form>
           <section className="rounded-lg border border-line bg-white p-4 shadow-sm">
@@ -2006,17 +2069,44 @@ export default function AdminDashboardPage() {
                 <div key={template.id} className="rounded-lg border border-line p-3 text-sm">
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <p className="font-semibold">{template.key}</p>
-                    <span className="rounded-full border border-line px-2 py-1 text-xs">{template.enabled ? 'Enabled' : 'Disabled'}</span>
+                    <div className="flex flex-wrap gap-2">
+                      <span className="rounded-full border border-line px-2 py-1 text-xs">
+                        {template.source === 'custom' ? 'Custom sent' : 'System default sent'}
+                      </span>
+                      {template.isCustomized && template.source !== 'custom' && (
+                        <span className="rounded-full border border-line px-2 py-1 text-xs">Override disabled</span>
+                      )}
+                    </div>
                   </div>
                   <p className="mt-2 font-medium">{template.subject}</p>
                   <p className="mt-1 whitespace-pre-line break-words text-slate-600">{template.body}</p>
-                  <button
-                    type="button"
-                    onClick={() => deleteTemplate(template.key)}
-                    className="focus-ring mt-3 rounded-lg border border-line px-3 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-50"
-                  >
-                    Delete
-                  </button>
+                  {template.placeholders?.length ? (
+                    <div className="mt-3 flex flex-wrap gap-1.5">
+                      {template.placeholders.map((placeholder) => (
+                        <span key={placeholder} className="rounded-full bg-slate-100 px-2 py-1 text-xs text-slate-600">
+                          {`{{${placeholder}}}`}
+                        </span>
+                      ))}
+                    </div>
+                  ) : null}
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      onClick={() => editTemplate(template)}
+                      className="focus-ring rounded-lg border border-line px-3 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-50"
+                    >
+                      Edit
+                    </button>
+                    {template.isCustomized && (
+                      <button
+                        type="button"
+                        onClick={() => deleteTemplate(template.key)}
+                        className="focus-ring rounded-lg border border-line px-3 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-50"
+                      >
+                        Reset to default
+                      </button>
+                    )}
+                  </div>
                 </div>
               ))}
             </div>

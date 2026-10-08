@@ -85,6 +85,21 @@ corepack pnpm dev
 
 The workspace package names remain `@josum/api` and `@josum/web` to avoid unnecessary package-lock churn in this inherited codebase. Product-facing names, copy, branding, seeds, and deployment examples are Eduloft-specific.
 
+## Email Delivery
+
+The API sends branded HTML and text emails through the SMTP settings in `.env`. Local Docker development can use Mailpit, while production must use a real provider.
+
+Required production values:
+
+- `SMTP_HOST`
+- `SMTP_PORT`
+- `SMTP_SECURE`
+- `SMTP_FROM`
+- `SMTP_USER` and `SMTP_PASSWORD` when the provider requires authentication
+- `PUBLIC_APP_URL` and `BRAND_LOGO_URL` so links and email logos render correctly
+
+Default system templates are available in the Admin Dashboard under Email templates. Saving a template creates a custom override; resetting it returns that workflow to the system default template.
+
 ## Production Notes
 
 - Configure `PUBLIC_APP_URL` and every `WEB_ORIGIN` with HTTPS URLs.
