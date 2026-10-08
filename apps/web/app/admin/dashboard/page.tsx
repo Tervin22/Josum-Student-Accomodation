@@ -32,7 +32,7 @@ import { useToast } from '@/components/ToastProvider';
 import { api, clearSession, compactForm, downloadDocument, downloadFinanceExport, downloadInspectionAttachment, downloadInspectionExport, downloadStorageExport, downloadStorageFile, getSession, upload } from '@/lib/api';
 import { isMaintenanceSlaBreached } from '@/lib/maintenance-sla';
 import { dashboardPathForRoles } from '@/lib/role-routing';
-import type { Application, ApplicationStatus, CommunicationRecord, FinanceReportRow, Inspection, InspectionPeriod, InspectionStatus, MaintenanceRequest, MaintenanceStatus, Paginated, Residence, ResidenceRoom, StorageRequest, StorageRequestStatus, User } from '@/lib/types';
+import type { Application, ApplicationStatus, CommunicationRecord, FinanceReportRow, Inspection, InspectionPeriod, InspectionStatus, MaintenanceRequest, MaintenanceStatus, Paginated, Residence, ResidenceRoom, RoomType, StorageRequest, StorageRequestStatus, User } from '@/lib/types';
 
 type Tab = 'overview' | 'applications' | 'maintenance' | 'storage' | 'finance' | 'inspections' | 'rooms' | 'students' | 'communications' | 'settings' | 'templates' | 'audit';
 type Stats = {
@@ -159,6 +159,7 @@ export default function AdminDashboardPage() {
   const [students, setStudents] = useState<Paginated<User>>({ items: [], total: 0, page: 1, limit: 20 });
   const [communications, setCommunications] = useState<Paginated<CommunicationRecord>>({ items: [], total: 0, page: 1, limit: 20 });
   const [residenceRooms, setResidenceRooms] = useState<ResidenceRoom[]>([]);
+  const [roomTypes, setRoomTypes] = useState<RoomType[]>([]);
   const [settings, setSettings] = useState<Setting[]>([]);
   const [templates, setTemplates] = useState<Template[]>([]);
   const [audit, setAudit] = useState<Paginated<AuditLog>>({ items: [], total: 0, page: 1, limit: 50 });
@@ -243,6 +244,7 @@ export default function AdminDashboardPage() {
     }
     if (hasAnyRole(currentRoles, roomViewRoles)) {
       requests.push(settle('rooms', api<ResidenceRoom[]>('/residence-rooms')));
+      requests.push(settle('room categories', api<RoomType[]>('/room-types/admin')));
       if (!hasAnyRole(currentRoles, applicationReviewRoles)) {
         requests.push(settle('residences', api<Residence[]>('/residences')));
       }
@@ -291,6 +293,9 @@ export default function AdminDashboardPage() {
           break;
         case 'rooms':
           setResidenceRooms(result.value as ResidenceRoom[]);
+          break;
+        case 'room categories':
+          setRoomTypes(result.value as RoomType[]);
           break;
         case 'residences': {
           const residences = (result.value as Residence[]).map((residence) => ({ ...residence, occupiedRooms: 0 }));
@@ -376,6 +381,19 @@ export default function AdminDashboardPage() {
       await load();
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Could not update room');
+    }
+  }
+
+  async function createResidenceRooms(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const form = event.currentTarget;
+    try {
+      await api('/residence-rooms', { method: 'POST', body: JSON.stringify(compactForm(new FormData(form))) });
+      toast.success('Rooms added');
+      form.reset();
+      await load();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Could not add rooms');
     }
   }
 
@@ -1576,6 +1594,64 @@ export default function AdminDashboardPage() {
               </div>
             ))}
           </div>
+          {hasAnyRole(sessionRoles, roomManagementRoles) && (
+            <form onSubmit={createResidenceRooms} className="mt-5 grid gap-3 border-t border-line pt-5">
+              <div>
+                <h3 className="text-sm font-semibold uppercase text-slate-500">Add rooms</h3>
+                <p className="mt-1 text-sm text-slate-500">
+                  Create numbered rooms for Eduloft Centurion and keep room totals in sync.
+                </p>
+              </div>
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-6">
+                <label className="grid gap-1 text-xs font-semibold text-slate-600 lg:col-span-2">
+                  Residence
+                  <select name="residenceId" required className="focus-ring h-10 rounded-md border border-line bg-white px-3 text-sm font-normal text-ink">
+                    <option value="">Choose residence</option>
+                    {stats.residences.map((residence) => (
+                      <option key={residence.id} value={residence.id}>{residence.name}</option>
+                    ))}
+                  </select>
+                </label>
+                <label className="grid gap-1 text-xs font-semibold text-slate-600 lg:col-span-2">
+                  Room category
+                  <select name="roomTypeName" required className="focus-ring h-10 rounded-md border border-line bg-white px-3 text-sm font-normal text-ink">
+                    <option value="">Choose category</option>
+                    {roomTypes.map((roomType) => (
+                      <option key={roomType.id} value={roomType.roomTypeName}>{roomType.roomTypeName}</option>
+                    ))}
+                  </select>
+                </label>
+                <label className="grid gap-1 text-xs font-semibold text-slate-600">
+                  First room no.
+                  <input name="startRoomNumber" type="number" min={1} max={10000} defaultValue={1} required className="focus-ring h-10 rounded-md border border-line px-3 text-sm font-normal text-ink" />
+                </label>
+                <label className="grid gap-1 text-xs font-semibold text-slate-600">
+                  How many
+                  <input name="numberOfRooms" type="number" min={1} max={500} defaultValue={1} required className="focus-ring h-10 rounded-md border border-line px-3 text-sm font-normal text-ink" />
+                </label>
+                <label className="grid gap-1 text-xs font-semibold text-slate-600">
+                  Capacity
+                  <input name="capacity" type="number" min={1} max={20} defaultValue={1} required className="focus-ring h-10 rounded-md border border-line px-3 text-sm font-normal text-ink" />
+                </label>
+                <label className="grid gap-1 text-xs font-semibold text-slate-600">
+                  Gender
+                  <select name="genderAllocation" required defaultValue="Female" className="focus-ring h-10 rounded-md border border-line bg-white px-3 text-sm font-normal text-ink">
+                    <option value="Female">Female</option>
+                    <option value="Male">Male</option>
+                    <option value="Other">Other</option>
+                  </select>
+                </label>
+                <label className="grid gap-1 text-xs font-semibold text-slate-600 lg:col-span-2">
+                  Room name prefix
+                  <input name="roomNamePrefix" defaultValue="Room" maxLength={80} className="focus-ring h-10 rounded-md border border-line px-3 text-sm font-normal text-ink" />
+                </label>
+                <button className="focus-ring inline-flex h-10 items-center justify-center gap-2 rounded-md bg-brand px-4 text-sm font-semibold text-white hover:bg-brand-dark lg:col-span-2 lg:self-end">
+                  <Building2 className="h-4 w-4" />
+                  Add rooms
+                </button>
+              </div>
+            </form>
+          )}
           <div className="mt-6 border-t border-line pt-5">
             <h3 className="text-sm font-semibold uppercase text-slate-500">Individual room inventory</h3>
             <p className="mt-1 text-sm text-slate-500">
@@ -1591,9 +1667,10 @@ export default function AdminDashboardPage() {
                     {residenceRooms.filter((room) => room.residenceId === residence.id && room.status === 'AVAILABLE').length} individually available
                   </span>
                 </div>
-                <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                  {residenceRooms
-                    .filter((room) => room.residenceId === residence.id)
+                {residenceRooms.filter((room) => room.residenceId === residence.id).length ? (
+                  <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                    {residenceRooms
+                      .filter((room) => room.residenceId === residence.id)
                     .map((room) => hasAnyRole(sessionRoles, roomManagementRoles) ? (
                       <form
                         key={room.id}
@@ -1629,21 +1706,30 @@ export default function AdminDashboardPage() {
                         <span className="w-fit rounded-full border border-line px-2 py-1 text-xs text-slate-600">{formatEnum(room.status)}</span>
                       </div>
                     ))}
-                </div>
+                  </div>
+                ) : (
+                  <p className="mt-3 rounded-md border border-dashed border-line px-3 py-3 text-sm text-slate-500">
+                    No rooms added yet. Use Add rooms above to create the first numbered rooms.
+                  </p>
+                )}
               </div>
             ))}
           </div>
           <div className="mt-6 border-t border-line pt-5">
             <h3 className="text-sm font-semibold uppercase text-slate-500">Room category</h3>
           </div>
-          <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-b border-line py-3">
-            <div>
-              <p className="font-semibold text-ink">Eduloft room categories</p>
-              <p className="mt-1 text-sm text-slate-500">Eduloft room categories are managed after confirmed room inventory is configured.</p>
-            </div>
-            <p className="text-sm font-medium text-ink">
-              {stats?.availableRooms ?? 0} of {stats?.totalRooms ?? 0} available
-            </p>
+          <div className="mt-4 grid gap-2">
+            {roomTypes.map((roomType) => (
+              <div key={roomType.id} className="flex flex-wrap items-center justify-between gap-3 border-b border-line py-3">
+                <div>
+                  <p className="font-semibold text-ink">{roomType.roomTypeName}</p>
+                  <p className="mt-1 text-sm text-slate-500">Managed from numbered room inventory.</p>
+                </div>
+                <p className="text-sm font-medium text-ink">
+                  {roomType.availableRooms} of {roomType.totalRooms} available
+                </p>
+              </div>
+            ))}
           </div>
         </section>
       )}

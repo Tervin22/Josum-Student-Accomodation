@@ -230,6 +230,9 @@ export function compactForm(form: FormData) {
     'year',
     'page',
     'limit',
+    'startRoomNumber',
+    'numberOfRooms',
+    'capacity',
   ]);
   const booleanFields = new Set([
     'termsAccepted',

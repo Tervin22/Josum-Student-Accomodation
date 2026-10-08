@@ -1,10 +1,11 @@
-import { Body, Controller, Get, Param, Patch, Query, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Param, Patch, Post, Query, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { Roles } from '../common/decorators/roles.decorator';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../common/guards/roles.guard';
 import { ROOM_MANAGEMENT_ROLES, ROOM_VIEW_ROLES } from '../common/roles/role-groups';
+import { CreateResidenceRoomsDto } from './dto/create-residence-rooms.dto';
 import { ListResidenceRoomsDto } from './dto/list-residence-rooms.dto';
 import { UpdateResidenceRoomDto } from './dto/update-residence-room.dto';
 import { ResidenceRoomsService } from './residence-rooms.service';
@@ -20,6 +21,12 @@ export class ResidenceRoomsController {
   @Roles(...ROOM_VIEW_ROLES)
   list(@Query() query: ListResidenceRoomsDto) {
     return this.rooms.list(query);
+  }
+
+  @Post()
+  @Roles(...ROOM_MANAGEMENT_ROLES)
+  create(@CurrentUser() user: { sub: string }, @Body() dto: CreateResidenceRoomsDto) {
+    return this.rooms.createMany(user.sub, dto);
   }
 
   @Patch(':id')
