@@ -3,6 +3,21 @@ export const EDULOFT_LOCATION = 'Eco Park, Centurion, Gauteng';
 export const EDULOFT_CONTACT_EMAIL = 'apply@eduloft.co.za';
 export const EDULOFT_STORAGE_SITE = 'EDULOFT_CENTURION';
 
+export const EDULOFT_GALLERY_IMAGES = [
+  {
+    src: '/eduloft/eduloft-lounge.jpg',
+    alt: 'Eduloft furnished student lounge',
+  },
+  {
+    src: '/eduloft/eduloft-study-lounge.jpg',
+    alt: 'Eduloft student study lounge',
+  },
+  {
+    src: '/eduloft/eduloft-reception.jpg',
+    alt: 'Eduloft reception and access area',
+  },
+] as const;
+
 export const EDULOFT_ROOM_OPTIONS = [
   {
     name: 'The Nook',

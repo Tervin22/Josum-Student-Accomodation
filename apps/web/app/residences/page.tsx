@@ -18,6 +18,7 @@ import { BRAND_LOGO_URL, BRAND_NAME } from '@/lib/brand';
 import {
   EDULOFT_CONTACT_EMAIL,
   EDULOFT_FEATURES,
+  EDULOFT_GALLERY_IMAGES,
   EDULOFT_LOCATION,
   EDULOFT_NEARBY,
   EDULOFT_ROOM_OPTIONS,
@@ -28,12 +29,20 @@ export default function ResidencesPage() {
   const [residences, setResidences] = useState<Residence[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [galleryIndex, setGalleryIndex] = useState(0);
 
   useEffect(() => {
     api<Residence[]>('/residences')
       .then(setResidences)
       .catch((nextError) => setError(nextError instanceof Error ? nextError.message : 'Could not load residences'))
       .finally(() => setLoading(false));
+  }, []);
+
+  useEffect(() => {
+    const interval = window.setInterval(() => {
+      setGalleryIndex((current) => (current + 1) % EDULOFT_GALLERY_IMAGES.length);
+    }, 4200);
+    return () => window.clearInterval(interval);
   }, []);
 
   return (
@@ -74,14 +83,34 @@ export default function ResidencesPage() {
               </a>
             </div>
           </div>
-          <Image
-            src="/eduloft/eduloft-common-areas.jpg"
-            alt="Eduloft shared student living areas"
-            width={1100}
-            height={620}
-            priority
-            className="aspect-[16/10] w-full rounded-lg bg-slate-100 object-contain shadow-soft"
-          />
+          <div className="relative aspect-[16/10] w-full overflow-hidden rounded-lg bg-slate-100 shadow-soft">
+            {EDULOFT_GALLERY_IMAGES.map((image, index) => (
+              <Image
+                key={image.src}
+                src={image.src}
+                alt={image.alt}
+                fill
+                priority={index === 0}
+                sizes="(min-width: 1024px) 46vw, 100vw"
+                className={`object-cover object-center transition-opacity duration-700 ${
+                  index === galleryIndex ? 'opacity-100' : 'opacity-0'
+                }`}
+              />
+            ))}
+            <div className="absolute bottom-3 left-1/2 flex -translate-x-1/2 gap-2 rounded-full bg-ink/55 px-2 py-1">
+              {EDULOFT_GALLERY_IMAGES.map((image, index) => (
+                <button
+                  key={image.src}
+                  type="button"
+                  onClick={() => setGalleryIndex(index)}
+                  aria-label={`Show image ${index + 1}`}
+                  className={`h-2.5 w-2.5 rounded-full transition ${
+                    index === galleryIndex ? 'bg-brand' : 'bg-white/75 hover:bg-white'
+                  }`}
+                />
+              ))}
+            </div>
+          </div>
         </div>
       </section>
 
@@ -100,7 +129,7 @@ export default function ResidencesPage() {
         <div className="mt-6 grid gap-6 sm:grid-cols-2 xl:grid-cols-4">
           {EDULOFT_ROOM_OPTIONS.map((room) => (
             <article key={room.name} className="overflow-hidden rounded-lg border border-line bg-white shadow-sm">
-              <Image src={room.image} alt={`${room.name} apartment`} width={760} height={520} className="aspect-[4/3] w-full bg-slate-100 object-contain" />
+              <Image src={room.image} alt={`${room.name} apartment`} width={760} height={520} className="aspect-[4/3] w-full bg-slate-100 object-cover object-center" />
               <div className="p-4">
                 <div className="flex items-start justify-between gap-3">
                   <div>
