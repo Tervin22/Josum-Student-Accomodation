@@ -5,16 +5,16 @@ export const EDULOFT_STORAGE_SITE = 'EDULOFT_CENTURION';
 
 export const EDULOFT_GALLERY_IMAGES = [
   {
-    src: '/eduloft/eduloft-lounge.jpg',
-    alt: 'Eduloft furnished student lounge',
+    src: '/eduloft/eduloft-gallery-1.jpg',
+    alt: 'Eduloft student living interior',
   },
   {
-    src: '/eduloft/eduloft-study-lounge.jpg',
-    alt: 'Eduloft student study lounge',
+    src: '/eduloft/eduloft-gallery-2.jpg',
+    alt: 'Eduloft shared student lounge',
   },
   {
-    src: '/eduloft/eduloft-reception.jpg',
-    alt: 'Eduloft reception and access area',
+    src: '/eduloft/eduloft-gallery-3.jpg',
+    alt: 'Eduloft bright student common area',
   },
 ] as const;
 
