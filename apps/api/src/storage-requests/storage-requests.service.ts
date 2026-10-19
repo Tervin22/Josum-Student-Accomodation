@@ -382,7 +382,7 @@ export class StorageRequestsService {
 
   storageFormTemplate() {
     return [
-      'EDULOFT STUDENT ACCOMMODATION',
+      'JOSUM STUDENT RESIDENCE',
       '(STORAGE FORM)',
       '',
       'Student Name and Surname: ___________________________',
@@ -399,9 +399,9 @@ export class StorageRequestsService {
       '4.',
       '5.',
       '',
-      'Storage site: Eduloft Centurion',
+      'Storage site: Josum One / Josum Two',
       '',
-      'TAKE NOTE storage is an optional operational workflow. Fees, storage availability, collection windows, and release rules must be confirmed by Eduloft management before this form is used.',
+      'TAKE NOTE storage services are exclusively offered to students who will be residing at Josum for the 2025 academic year. Should you need to retrieve your belongings for reasons other than moving out, especially if the year has not lapsed, a fee of R 4 100 will be charged for every month of the duration of the storage period.',
       '',
       'Management Signature: ___________________________',
     ].join('\n');
@@ -604,12 +604,14 @@ export class StorageRequestsService {
 
   private storageSiteFromResidence(name?: string | null) {
     const normalized = name?.toLowerCase() ?? '';
-    if (normalized.includes('eduloft') || normalized.includes('centurion')) return 'EDULOFT_CENTURION';
+    if (normalized.includes('two') || normalized.includes('2')) return 'JOSUM_TWO';
+    if (normalized.includes('one') || normalized.includes('1')) return 'JOSUM_ONE';
     return undefined;
   }
 
   private formatStorageSite(value?: string | null) {
-    if (value === 'EDULOFT_CENTURION') return 'Eduloft Centurion';
+    if (value === 'JOSUM_ONE') return 'Josum One';
+    if (value === 'JOSUM_TWO') return 'Josum Two';
     return value ?? '';
   }
 

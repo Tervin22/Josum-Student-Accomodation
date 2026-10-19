@@ -146,7 +146,7 @@ export class PaymentRemindersService implements OnModuleInit, OnModuleDestroy {
         data: {
           userId: application.userId,
           title: 'Monthly payment reminder',
-          body: `Accommodation payment reminder for ${this.periodLabel(period)}. Use the latest Eduloft-approved invoice or payment instruction.`,
+          body: `Accommodation payment reminder for ${this.periodLabel(period)}: R5100.`,
         },
       });
       await this.audit.log({

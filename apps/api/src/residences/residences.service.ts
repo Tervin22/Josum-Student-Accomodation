@@ -7,7 +7,6 @@ export class ResidencesService {
 
   list() {
     return this.prisma.residence.findMany({
-      where: { name: { notIn: ['Josum 1', 'Josum 2'] } },
       orderBy: { name: 'asc' },
     });
   }

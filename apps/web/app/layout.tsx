@@ -5,10 +5,10 @@ import { SystemGuideChatbot } from '@/components/SystemGuideChatbot';
 
 export const metadata: Metadata = {
   title: {
-    default: 'Eduloft Student Accommodation',
-    template: '%s | Eduloft',
+    default: 'Josum Student Accommodation',
+    template: '%s | Josum Student Accommodation',
   },
-  description: 'Eduloft Centurion student accommodation application and administration portal.',
+  description: 'Multi-residence student accommodation booking and administration portal in Bedworth Park, Vereeniging.',
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {

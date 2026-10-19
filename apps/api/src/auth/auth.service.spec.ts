@@ -10,7 +10,7 @@ const registerStudentDto: RegisterStudentDto = {
   lastName: 'One',
   phone: '0712345678',
   studentNumber: 'STU-001',
-  institution: 'STADIO',
+  institution: 'NWU',
   course: 'BCom',
   yearOfStudy: 2,
   dateOfBirth: '2000-01-01',

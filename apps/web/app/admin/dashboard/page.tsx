@@ -32,7 +32,7 @@ import { useToast } from '@/components/ToastProvider';
 import { api, clearSession, compactForm, downloadDocument, downloadFinanceExport, downloadInspectionAttachment, downloadInspectionExport, downloadStorageExport, downloadStorageFile, getSession, upload } from '@/lib/api';
 import { isMaintenanceSlaBreached } from '@/lib/maintenance-sla';
 import { dashboardPathForRoles } from '@/lib/role-routing';
-import type { Application, ApplicationStatus, CommunicationRecord, FinanceReportRow, Inspection, InspectionPeriod, InspectionStatus, MaintenanceRequest, MaintenanceStatus, Paginated, Residence, ResidenceRoom, RoomType, StorageRequest, StorageRequestStatus, User } from '@/lib/types';
+import type { Application, ApplicationStatus, CommunicationRecord, FinanceReportRow, Inspection, InspectionPeriod, InspectionStatus, MaintenanceRequest, MaintenanceStatus, Paginated, Residence, ResidenceRoom, StorageRequest, StorageRequestStatus, User } from '@/lib/types';
 
 type Tab = 'overview' | 'applications' | 'maintenance' | 'storage' | 'finance' | 'inspections' | 'rooms' | 'students' | 'communications' | 'settings' | 'templates' | 'audit';
 type Stats = {
@@ -49,17 +49,7 @@ type Stats = {
   statuses: Record<string, number>;
 };
 type Setting = { id: string; key: string; value: unknown; description?: string };
-type Template = {
-  id: string;
-  key: string;
-  subject: string;
-  body: string;
-  enabled: boolean;
-  source?: 'default' | 'custom';
-  isCustomized?: boolean;
-  placeholders?: string[];
-  updatedAt?: string | null;
-};
+type Template = { id: string; key: string; subject: string; body: string; enabled: boolean };
 type AuditLog = {
   id: string;
   action: string;
@@ -169,10 +159,8 @@ export default function AdminDashboardPage() {
   const [students, setStudents] = useState<Paginated<User>>({ items: [], total: 0, page: 1, limit: 20 });
   const [communications, setCommunications] = useState<Paginated<CommunicationRecord>>({ items: [], total: 0, page: 1, limit: 20 });
   const [residenceRooms, setResidenceRooms] = useState<ResidenceRoom[]>([]);
-  const [roomTypes, setRoomTypes] = useState<RoomType[]>([]);
   const [settings, setSettings] = useState<Setting[]>([]);
   const [templates, setTemplates] = useState<Template[]>([]);
-  const [templateDraft, setTemplateDraft] = useState({ key: '', subject: '', body: '', enabled: true });
   const [audit, setAudit] = useState<Paginated<AuditLog>>({ items: [], total: 0, page: 1, limit: 50 });
   const [applicationSearch, setApplicationSearch] = useState('');
   const [applicationStatus, setApplicationStatus] = useState('');
@@ -255,7 +243,6 @@ export default function AdminDashboardPage() {
     }
     if (hasAnyRole(currentRoles, roomViewRoles)) {
       requests.push(settle('rooms', api<ResidenceRoom[]>('/residence-rooms')));
-      requests.push(settle('room categories', api<RoomType[]>('/room-types/admin')));
       if (!hasAnyRole(currentRoles, applicationReviewRoles)) {
         requests.push(settle('residences', api<Residence[]>('/residences')));
       }
@@ -304,9 +291,6 @@ export default function AdminDashboardPage() {
           break;
         case 'rooms':
           setResidenceRooms(result.value as ResidenceRoom[]);
-          break;
-        case 'room categories':
-          setRoomTypes(result.value as RoomType[]);
           break;
         case 'residences': {
           const residences = (result.value as Residence[]).map((residence) => ({ ...residence, occupiedRooms: 0 }));
@@ -361,10 +345,10 @@ export default function AdminDashboardPage() {
 
     selectTabFromLocation();
     window.addEventListener('popstate', selectTabFromLocation);
-    window.addEventListener('eduloft:set-dashboard-tab', handleDashboardTab);
+    window.addEventListener('josum:set-dashboard-tab', handleDashboardTab);
     return () => {
       window.removeEventListener('popstate', selectTabFromLocation);
-      window.removeEventListener('eduloft:set-dashboard-tab', handleDashboardTab);
+      window.removeEventListener('josum:set-dashboard-tab', handleDashboardTab);
     };
   }, []);
 
@@ -392,19 +376,6 @@ export default function AdminDashboardPage() {
       await load();
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Could not update room');
-    }
-  }
-
-  async function createResidenceRooms(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    const form = event.currentTarget;
-    try {
-      await api('/residence-rooms', { method: 'POST', body: JSON.stringify(compactForm(new FormData(form))) });
-      toast.success('Rooms added');
-      form.reset();
-      await load();
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Could not add rooms');
     }
   }
 
@@ -564,34 +535,24 @@ export default function AdminDashboardPage() {
 
   async function upsertTemplate(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    const formElement = event.currentTarget;
+    const form = new FormData(formElement);
     try {
       await api('/settings/email-templates', {
         method: 'PUT',
         body: JSON.stringify({
-          key: templateDraft.key,
-          subject: templateDraft.subject,
-          body: templateDraft.body,
-          enabled: templateDraft.enabled,
+          key: form.get('key'),
+          subject: form.get('subject'),
+          body: form.get('body'),
+          enabled: form.get('enabled') === 'on',
         }),
       });
       toast.success('Template saved');
+      formElement.reset();
       await load();
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Could not save template');
     }
-  }
-
-  function editTemplate(template: Template) {
-    setTemplateDraft({
-      key: template.key,
-      subject: template.subject,
-      body: template.body,
-      enabled: template.enabled,
-    });
-  }
-
-  function clearTemplateDraft() {
-    setTemplateDraft({ key: '', subject: '', body: '', enabled: true });
   }
 
   async function deleteSetting(key: string) {
@@ -608,7 +569,6 @@ export default function AdminDashboardPage() {
     try {
       await api(`/settings/email-templates/${encodeURIComponent(key)}`, { method: 'DELETE' });
       toast.success('Template deleted');
-      if (templateDraft.key === key) clearTemplateDraft();
       await load();
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Could not delete template');
@@ -1616,64 +1576,6 @@ export default function AdminDashboardPage() {
               </div>
             ))}
           </div>
-          {hasAnyRole(sessionRoles, roomManagementRoles) && (
-            <form onSubmit={createResidenceRooms} className="mt-5 grid gap-3 border-t border-line pt-5">
-              <div>
-                <h3 className="text-sm font-semibold uppercase text-slate-500">Add rooms</h3>
-                <p className="mt-1 text-sm text-slate-500">
-                  Create numbered rooms for Eduloft Centurion and keep room totals in sync.
-                </p>
-              </div>
-              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-6">
-                <label className="grid gap-1 text-xs font-semibold text-slate-600 lg:col-span-2">
-                  Residence
-                  <select name="residenceId" required className="focus-ring h-10 rounded-md border border-line bg-white px-3 text-sm font-normal text-ink">
-                    <option value="">Choose residence</option>
-                    {stats.residences.map((residence) => (
-                      <option key={residence.id} value={residence.id}>{residence.name}</option>
-                    ))}
-                  </select>
-                </label>
-                <label className="grid gap-1 text-xs font-semibold text-slate-600 lg:col-span-2">
-                  Room category
-                  <select name="roomTypeName" required className="focus-ring h-10 rounded-md border border-line bg-white px-3 text-sm font-normal text-ink">
-                    <option value="">Choose category</option>
-                    {roomTypes.map((roomType) => (
-                      <option key={roomType.id} value={roomType.roomTypeName}>{roomType.roomTypeName}</option>
-                    ))}
-                  </select>
-                </label>
-                <label className="grid gap-1 text-xs font-semibold text-slate-600">
-                  First room no.
-                  <input name="startRoomNumber" type="number" min={1} max={10000} defaultValue={1} required className="focus-ring h-10 rounded-md border border-line px-3 text-sm font-normal text-ink" />
-                </label>
-                <label className="grid gap-1 text-xs font-semibold text-slate-600">
-                  How many
-                  <input name="numberOfRooms" type="number" min={1} max={500} defaultValue={1} required className="focus-ring h-10 rounded-md border border-line px-3 text-sm font-normal text-ink" />
-                </label>
-                <label className="grid gap-1 text-xs font-semibold text-slate-600">
-                  Capacity
-                  <input name="capacity" type="number" min={1} max={20} defaultValue={1} required className="focus-ring h-10 rounded-md border border-line px-3 text-sm font-normal text-ink" />
-                </label>
-                <label className="grid gap-1 text-xs font-semibold text-slate-600">
-                  Gender
-                  <select name="genderAllocation" required defaultValue="Female" className="focus-ring h-10 rounded-md border border-line bg-white px-3 text-sm font-normal text-ink">
-                    <option value="Female">Female</option>
-                    <option value="Male">Male</option>
-                    <option value="Other">Other</option>
-                  </select>
-                </label>
-                <label className="grid gap-1 text-xs font-semibold text-slate-600 lg:col-span-2">
-                  Room name prefix
-                  <input name="roomNamePrefix" defaultValue="Room" maxLength={80} className="focus-ring h-10 rounded-md border border-line px-3 text-sm font-normal text-ink" />
-                </label>
-                <button className="focus-ring inline-flex h-10 items-center justify-center gap-2 rounded-md bg-brand px-4 text-sm font-semibold text-white hover:bg-brand-dark lg:col-span-2 lg:self-end">
-                  <Building2 className="h-4 w-4" />
-                  Add rooms
-                </button>
-              </div>
-            </form>
-          )}
           <div className="mt-6 border-t border-line pt-5">
             <h3 className="text-sm font-semibold uppercase text-slate-500">Individual room inventory</h3>
             <p className="mt-1 text-sm text-slate-500">
@@ -1689,10 +1591,9 @@ export default function AdminDashboardPage() {
                     {residenceRooms.filter((room) => room.residenceId === residence.id && room.status === 'AVAILABLE').length} individually available
                   </span>
                 </div>
-                {residenceRooms.filter((room) => room.residenceId === residence.id).length ? (
-                  <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                    {residenceRooms
-                      .filter((room) => room.residenceId === residence.id)
+                <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                  {residenceRooms
+                    .filter((room) => room.residenceId === residence.id)
                     .map((room) => hasAnyRole(sessionRoles, roomManagementRoles) ? (
                       <form
                         key={room.id}
@@ -1728,30 +1629,21 @@ export default function AdminDashboardPage() {
                         <span className="w-fit rounded-full border border-line px-2 py-1 text-xs text-slate-600">{formatEnum(room.status)}</span>
                       </div>
                     ))}
-                  </div>
-                ) : (
-                  <p className="mt-3 rounded-md border border-dashed border-line px-3 py-3 text-sm text-slate-500">
-                    No rooms added yet. Use Add rooms above to create the first numbered rooms.
-                  </p>
-                )}
+                </div>
               </div>
             ))}
           </div>
           <div className="mt-6 border-t border-line pt-5">
             <h3 className="text-sm font-semibold uppercase text-slate-500">Room category</h3>
           </div>
-          <div className="mt-4 grid gap-2">
-            {roomTypes.map((roomType) => (
-              <div key={roomType.id} className="flex flex-wrap items-center justify-between gap-3 border-b border-line py-3">
-                <div>
-                  <p className="font-semibold text-ink">{roomType.roomTypeName}</p>
-                  <p className="mt-1 text-sm text-slate-500">Managed from numbered room inventory.</p>
-                </div>
-                <p className="text-sm font-medium text-ink">
-                  {roomType.availableRooms} of {roomType.totalRooms} available
-                </p>
-              </div>
-            ))}
+          <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-b border-line py-3">
+            <div>
+              <p className="font-semibold text-ink">Single Room</p>
+              <p className="mt-1 text-sm text-slate-500">The only room category at Josum 1 and Josum 2.</p>
+            </div>
+            <p className="text-sm font-medium text-ink">
+              {stats?.availableRooms ?? 0} of {stats?.totalRooms ?? 0} available
+            </p>
           </div>
         </section>
       )}
@@ -2011,55 +1903,14 @@ export default function AdminDashboardPage() {
           <form onSubmit={upsertTemplate} className="rounded-lg border border-line bg-white p-4 shadow-sm">
             <h2 className="font-semibold text-ink">Email template</h2>
             <div className="mt-4 grid gap-3">
-              <input
-                name="key"
-                placeholder="Template key"
-                required
-                value={templateDraft.key}
-                onChange={(event) => setTemplateDraft((draft) => ({ ...draft, key: event.target.value }))}
-                className="focus-ring rounded-lg border border-line px-3 py-2"
-              />
-              <input
-                name="subject"
-                placeholder="Subject"
-                required
-                value={templateDraft.subject}
-                onChange={(event) => setTemplateDraft((draft) => ({ ...draft, subject: event.target.value }))}
-                className="focus-ring rounded-lg border border-line px-3 py-2"
-              />
-              <textarea
-                name="body"
-                rows={10}
-                placeholder="Body"
-                required
-                value={templateDraft.body}
-                onChange={(event) => setTemplateDraft((draft) => ({ ...draft, body: event.target.value }))}
-                className="focus-ring rounded-lg border border-line px-3 py-2"
-              />
+              <input name="key" placeholder="Template key" required className="focus-ring rounded-lg border border-line px-3 py-2" />
+              <input name="subject" placeholder="Subject" required className="focus-ring rounded-lg border border-line px-3 py-2" />
+              <textarea name="body" rows={8} placeholder="Body" required className="focus-ring rounded-lg border border-line px-3 py-2" />
               <label className="flex items-center gap-2 text-sm font-medium">
-                <input
-                  name="enabled"
-                  type="checkbox"
-                  checked={templateDraft.enabled}
-                  onChange={(event) => setTemplateDraft((draft) => ({ ...draft, enabled: event.target.checked }))}
-                  className="h-4 w-4 rounded border-line text-brand"
-                />
+                <input name="enabled" type="checkbox" defaultChecked className="h-4 w-4 rounded border-line text-brand" />
                 Enabled
               </label>
-              <div className="flex flex-wrap gap-2">
-                <button className="focus-ring inline-flex items-center gap-2 rounded-lg bg-brand px-4 py-2.5 text-sm font-semibold text-white">
-                  <Save className="h-4 w-4" />
-                  Save template
-                </button>
-                <button
-                  type="button"
-                  onClick={clearTemplateDraft}
-                  className="focus-ring inline-flex items-center gap-2 rounded-lg border border-line px-4 py-2.5 text-sm font-semibold text-slate-600 hover:bg-slate-50"
-                >
-                  <X className="h-4 w-4" />
-                  Clear
-                </button>
-              </div>
+              <button className="focus-ring rounded-lg bg-brand px-4 py-2.5 text-sm font-semibold text-white">Save template</button>
             </div>
           </form>
           <section className="rounded-lg border border-line bg-white p-4 shadow-sm">
@@ -2069,44 +1920,17 @@ export default function AdminDashboardPage() {
                 <div key={template.id} className="rounded-lg border border-line p-3 text-sm">
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <p className="font-semibold">{template.key}</p>
-                    <div className="flex flex-wrap gap-2">
-                      <span className="rounded-full border border-line px-2 py-1 text-xs">
-                        {template.source === 'custom' ? 'Custom sent' : 'System default sent'}
-                      </span>
-                      {template.isCustomized && template.source !== 'custom' && (
-                        <span className="rounded-full border border-line px-2 py-1 text-xs">Override disabled</span>
-                      )}
-                    </div>
+                    <span className="rounded-full border border-line px-2 py-1 text-xs">{template.enabled ? 'Enabled' : 'Disabled'}</span>
                   </div>
                   <p className="mt-2 font-medium">{template.subject}</p>
                   <p className="mt-1 whitespace-pre-line break-words text-slate-600">{template.body}</p>
-                  {template.placeholders?.length ? (
-                    <div className="mt-3 flex flex-wrap gap-1.5">
-                      {template.placeholders.map((placeholder) => (
-                        <span key={placeholder} className="rounded-full bg-slate-100 px-2 py-1 text-xs text-slate-600">
-                          {`{{${placeholder}}}`}
-                        </span>
-                      ))}
-                    </div>
-                  ) : null}
-                  <div className="mt-3 flex flex-wrap gap-2">
-                    <button
-                      type="button"
-                      onClick={() => editTemplate(template)}
-                      className="focus-ring rounded-lg border border-line px-3 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-50"
-                    >
-                      Edit
-                    </button>
-                    {template.isCustomized && (
-                      <button
-                        type="button"
-                        onClick={() => deleteTemplate(template.key)}
-                        className="focus-ring rounded-lg border border-line px-3 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-50"
-                      >
-                        Reset to default
-                      </button>
-                    )}
-                  </div>
+                  <button
+                    type="button"
+                    onClick={() => deleteTemplate(template.key)}
+                    className="focus-ring mt-3 rounded-lg border border-line px-3 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-50"
+                  >
+                    Delete
+                  </button>
                 </div>
               ))}
             </div>
@@ -2231,7 +2055,7 @@ function ApplicationDetailsModal({ application, onClose }: { application: Applic
               <DetailField label="Assigned / preferred room" value={application.room ? `${application.room.name} - ${application.room.status}` : 'Not assigned'} />
               <DetailField label="Room required" value={application.roomType?.roomTypeName} />
               <DetailField label="Residence availability" value={application.residence ? `${application.residence.availableRooms} of ${application.residence.totalRooms}` : undefined} />
-              <DetailField label="Accepted or registered student" value={application.isNwuStudent ? 'Yes' : 'No'} />
+              <DetailField label="NWU Vaal student" value={application.isNwuStudent ? 'Yes' : 'No'} />
               <DetailField label="Year of study" value={application.studyYear} />
               <DetailField label="Semester" value={application.studySemester} />
               <DetailField label="Applicant type" value={application.returningStudent ? 'Returning student' : 'New student'} />
