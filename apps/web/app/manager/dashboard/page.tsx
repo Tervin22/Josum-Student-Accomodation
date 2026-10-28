@@ -6,6 +6,7 @@ import { AlertTriangle, Archive, Building2, ClipboardList, Download, Mail, Refre
 import { AppShell, EmptyState, StatTile } from '@/components/AppShell';
 import { MaintenanceSlaPanel } from '@/components/MaintenanceSlaPanel';
 import { StatusBadge } from '@/components/StatusBadge';
+import { ConfirmedRoomForm } from '@/components/ConfirmedRoomForm';
 import { useToast } from '@/components/ToastProvider';
 import { api, compactForm, downloadFinanceExport, downloadInspectionExport, downloadStorageExport, downloadStorageFile, getSession } from '@/lib/api';
 import { isMaintenanceSlaBreached } from '@/lib/maintenance-sla';
@@ -225,7 +226,7 @@ export default function ManagerDashboardPage() {
                             <select name="roomId" defaultValue={application.room?.id ?? ''} className="focus-ring h-9 rounded-lg border border-line px-2">
                               <option value="">Room</option>
                               {rooms
-                                .filter((room) => room.residenceId === application.residence.id && (room.status === 'AVAILABLE' || room.id === application.room?.id))
+                                .filter((room) => room.residenceId === application.residence.id && room.genderAllocation === application.gender && room.roomTypeName === (application.roomType?.displayName ?? application.roomType?.roomTypeName) && (room.status === 'AVAILABLE' || room.id === application.room?.id))
                                 .map((room) => <option key={room.id} value={room.id}>{room.name} - {formatEnum(room.status)}</option>)}
                             </select>
                           </div>
@@ -319,7 +320,7 @@ export default function ManagerDashboardPage() {
               <label className="grid gap-1 text-sm font-medium text-ink">
                 Accommodation
                 <select name="residenceId" className="focus-ring h-10 rounded-lg border border-line px-2">
-                  <option value="">Both accommodations</option>
+                  <option value="">All residences</option>
                   {stats?.residences.map((residence) => <option key={residence.id} value={residence.id}>{residence.name}</option>)}
                 </select>
               </label>
@@ -347,7 +348,7 @@ export default function ManagerDashboardPage() {
                     </div>
                     <p className="mt-2 text-slate-600">{item.message}</p>
                     <p className="mt-2 text-xs text-slate-500">
-                      {item.residence?.name ?? 'Both accommodations'} - {item.successCount}/{item.recipientCount} delivered - {formatDateTime(item.createdAt)}
+                      {item.residence?.name ?? 'All residences'} - {item.successCount}/{item.recipientCount} delivered - {formatDateTime(item.createdAt)}
                     </p>
                   </div>
                 ))}
@@ -508,6 +509,7 @@ export default function ManagerDashboardPage() {
                     <p>{residence.availableRooms}/{residence.totalRooms} available</p>
                   </div>
                   <p className="mt-1 text-slate-500">{residence.address}</p>
+                  <ConfirmedRoomForm residence={residence} onCreated={load} />
                 </div>
               ))}
             </div>

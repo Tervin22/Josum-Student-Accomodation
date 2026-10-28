@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Patch, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Param, Patch, Post, Query, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { Roles } from '../common/decorators/roles.decorator';
@@ -8,6 +8,7 @@ import { ROOM_TYPE_MANAGEMENT_ROLES } from '../common/roles/role-groups';
 import { UpdateRoomTypeDto } from './dto/update-room-type.dto';
 import { ValidateRoomTypePasscodeDto } from './dto/validate-room-type-passcode.dto';
 import { RoomTypesService } from './room-types.service';
+import { ListRoomTypesDto } from './dto/list-room-types.dto';
 
 @ApiTags('room-types')
 @Controller('room-types')
@@ -15,16 +16,16 @@ export class RoomTypesController {
   constructor(private readonly roomTypes: RoomTypesService) {}
 
   @Get()
-  listRoomTypes() {
-    return this.roomTypes.listRoomTypes();
+  listRoomTypes(@Query() query: ListRoomTypesDto) {
+    return this.roomTypes.listRoomTypes(query.residenceId);
   }
 
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(...ROOM_TYPE_MANAGEMENT_ROLES)
   @Get('admin')
-  listAdminRoomTypes() {
-    return this.roomTypes.listRoomTypes();
+  listAdminRoomTypes(@Query() query: ListRoomTypesDto) {
+    return this.roomTypes.listRoomTypes(query.residenceId, true);
   }
 
   @ApiBearerAuth()

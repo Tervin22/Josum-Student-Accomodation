@@ -6,8 +6,8 @@ import { PrismaService } from '../prisma/prisma.service';
 
 type TemplateVariables = Record<string, string | number | null | undefined>;
 
-const defaultAppName = 'Josum Student Accommodation';
-const defaultLogoUrl = 'https://josumres.co.za/wp-content/uploads/2025/08/Josum-Company-Logo-Final-Homepage.png';
+const defaultAppName = 'Student Residence Portal';
+const defaultLogoUrl = '';
 
 const defaultTemplates: Record<string, { subject: string; body: string }> = {
   'account-created': {
@@ -24,7 +24,7 @@ const defaultTemplates: Record<string, { subject: string; body: string }> = {
   },
   'documents-required': {
     subject: 'Documents required for application {{referenceCode}}',
-    body: "Hello {{name}},\n\nYour accommodation application has been received, but no supporting documents have been uploaded yet.\n\nApplication reference: {{referenceCode}}\nResidence: {{residenceName}}\nAddress: {{residenceAddress}}\nStatus: Submitted\n\nPlease sign in and upload the required documents so the application can be reviewed:\n\n- Applicant's ID / Passport copy\n- 2 x Student color ID Photos\n- Student's Acceptance Letter\n- Guarantor's ID / Passport copy, pay slip, 3 Months Bank statement, and proof of address\n- Medical Aid Certificate valid until November 2024 (International students only)\n\nUpload here: {{appUrl}}\n\nKind regards,\n{{appName}}",
+    body: 'Hello {{name}},\n\nYour application for {{residenceName}} has been received.\n\nApplication reference: {{referenceCode}}\nAddress: {{residenceAddress}}\n\nPlease sign in to view and upload the supporting documents required for your applicant category, registration and funding status. Management will review the documents before a room offer can be made.\n\nUpload here: {{appUrl}}\n\nKind regards,\n{{appName}}',
   },
   'application-status-changed': {
     subject: '{{statusSubject}}',
@@ -71,8 +71,8 @@ const defaultTemplates: Record<string, { subject: string; body: string }> = {
     body: 'Hello {{name}},\n\nYour visitor pre-registration has been {{status}}.\n\nVisitor: {{visitorName}}\nExpected visit date: {{expectedVisitDate}}\nExpected arrival time: {{expectedArrivalTime}}\nResidence: {{residenceName}}\nRoom: {{roomName}}{{noteBlock}}\n\nYou can view the latest visitor status here: {{appUrl}}\n\nKind regards,\n{{appName}}',
   },
   'self-paying-payment-reminder': {
-    subject: 'Monthly accommodation payment reminder: R5100 due',
-    body: 'Hello {{name}},\n\nThis is your monthly accommodation payment reminder for {{periodLabel}}.\n\nAmount due: R5100\nResidence: {{residenceName}}\nRoom: {{roomName}}\nStudent number: {{studentNumber}}\n\nBanking details:\nAccount holder: Josum Investments (Pty) Ltd\nBank: FNB\nAccount number: 62930055042\nBranch code: 250655\nReference: {{paymentReference}}\n\nPlease make payment on or before the due date and keep proof of payment for your records.\n\nYou can sign in here: {{appUrl}}\n\nKind regards,\n{{appName}}',
+    subject: '{{residenceName}} monthly payment reminder: {{amount}}',
+    body: 'Hello {{name}},\n\nAccommodation payment reminder for {{periodLabel}}.\n\nResidence: {{residenceName}}\nAmount: {{amount}}\nRoom: {{roomName}}\nStudent number: {{studentNumber}}\nReference: {{paymentReference}}\n\nObtain current payment instructions directly from your residence management before paying.\n\nSign in: {{appUrl}}\n\n{{appName}}',
   },
   'student-stay-terminated': {
     subject: 'Your accommodation stay has been terminated',
@@ -98,6 +98,7 @@ export class MailService {
       host: this.config.get<string>('SMTP_HOST'),
       port: this.config.get<number>('SMTP_PORT'),
       secure: this.config.get<boolean>('SMTP_SECURE'),
+      requireTLS: this.config.get<string>('NODE_ENV') === 'production' && !this.config.get<boolean>('SMTP_SECURE'),
       auth: smtpUser
         ? {
             user: smtpUser,
@@ -127,6 +128,17 @@ export class MailService {
   }
 
   async send(input: { to: string; subject: string; text: string; templateKey?: string }) {
+    if (String(this.config.get('CLIENT_PREVIEW_MODE') ?? 'false') === 'true') {
+      return this.prisma.emailLog.create({
+        data: {
+          recipient: input.to,
+          subject: input.subject,
+          templateKey: input.templateKey,
+          status: 'FAILED',
+          error: 'Email delivery is disabled in the temporary client-testing environment.',
+        },
+      });
+    }
     try {
       const info = await this.transporter.sendMail({
         to: input.to,
@@ -200,12 +212,12 @@ export class MailService {
       <div style="margin:0;padding:24px;background:#f6f8fb;font-family:Arial,Helvetica,sans-serif;color:#172033;">
         <div style="max-width:600px;margin:0 auto;background:#ffffff;border:1px solid #dde5ef;border-radius:10px;padding:24px;">
           <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px;">
-            <img src="${this.escapeHtml(this.logoUrl())}" alt="${this.escapeHtml(this.appName())}" width="72" style="display:block;max-width:72px;height:auto;border:0;" />
+            ${this.logoUrl() ? `<img src="${this.escapeHtml(this.logoUrl())}" alt="${this.escapeHtml(this.appName())}" width="72" style="display:block;max-width:72px;height:auto;border:0;" />` : ''}
             <div style="font-size:18px;font-weight:700;color:#172033;">${this.escapeHtml(this.appName())}</div>
           </div>
           <div style="font-size:15px;line-height:1.55;color:#27364a;">${body}</div>
           <div style="margin-top:24px;padding-top:16px;border-top:1px solid #e5edf5;font-size:12px;color:#667085;">
-            <img src="${this.escapeHtml(this.logoUrl())}" alt="${this.escapeHtml(this.appName())}" width="96" style="display:block;max-width:96px;height:auto;border:0;margin-bottom:8px;" />
+            ${this.logoUrl() ? `<img src="${this.escapeHtml(this.logoUrl())}" alt="${this.escapeHtml(this.appName())}" width="96" style="display:block;max-width:96px;height:auto;border:0;margin-bottom:8px;" />` : ''}
             ${this.escapeHtml(this.appName())}<br />
             This is an automated system notification.
           </div>

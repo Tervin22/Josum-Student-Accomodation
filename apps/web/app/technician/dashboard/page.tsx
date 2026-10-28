@@ -186,7 +186,7 @@ export default function TechnicianDashboardPage() {
             <label className="grid gap-1 text-sm font-medium text-ink">
               Accommodation
               <select name="residenceId" className="focus-ring h-10 rounded-lg border border-line px-2">
-                <option value="">Both accommodations</option>
+                <option value="">All residences</option>
                 {residences.map((residence) => <option key={residence.id} value={residence.id}>{residence.name}</option>)}
               </select>
             </label>
@@ -215,7 +215,7 @@ export default function TechnicianDashboardPage() {
                   </div>
                   <p className="mt-2 text-slate-600">{item.message}</p>
                   <p className="mt-2 text-xs text-slate-500">
-                    {item.residence?.name ?? 'Both accommodations'} - {item.successCount}/{item.recipientCount} delivered - {formatDateTime(item.createdAt)}
+                    {item.residence?.name ?? 'All residences'} - {item.successCount}/{item.recipientCount} delivered - {formatDateTime(item.createdAt)}
                   </p>
                 </div>
               ))}

@@ -129,7 +129,7 @@ export class StorageRequestsService {
             application.room?.roomNumber?.toString() ??
             application.room?.name,
           numberOfItemsStored: dto.numberOfItemsStored,
-          storageSite: dto.storageSite ?? this.storageSiteFromResidence(application.residence?.name),
+          storageSite: application.residence?.name,
           storageNoticeAccepted: dto.storageNoticeAccepted,
           itemDescription: this.clean(dto.itemDescription),
           files: {
@@ -382,7 +382,7 @@ export class StorageRequestsService {
 
   storageFormTemplate() {
     return [
-      'JOSUM STUDENT RESIDENCE',
+      'STUDENT RESIDENCE STORAGE',
       '(STORAGE FORM)',
       '',
       'Student Name and Surname: ___________________________',
@@ -399,9 +399,9 @@ export class StorageRequestsService {
       '4.',
       '5.',
       '',
-      'Storage site: Josum One / Josum Two',
+      'Storage site: the residence linked to the approved student stay',
       '',
-      'TAKE NOTE storage services are exclusively offered to students who will be residing at Josum for the 2025 academic year. Should you need to retrieve your belongings for reasons other than moving out, especially if the year has not lapsed, a fee of R 4 100 will be charged for every month of the duration of the storage period.',
+      'Storage is subject to approval by the management of the residence linked to your active stay. Confirm the applicable storage arrangements and any charges with that residence before handing over belongings.',
       '',
       'Management Signature: ___________________________',
     ].join('\n');
@@ -600,13 +600,6 @@ export class StorageRequestsService {
       .split('_')
       .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
       .join(' ');
-  }
-
-  private storageSiteFromResidence(name?: string | null) {
-    const normalized = name?.toLowerCase() ?? '';
-    if (normalized.includes('two') || normalized.includes('2')) return 'JOSUM_TWO';
-    if (normalized.includes('one') || normalized.includes('1')) return 'JOSUM_ONE';
-    return undefined;
   }
 
   private formatStorageSite(value?: string | null) {

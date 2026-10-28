@@ -63,11 +63,26 @@ export type RoomType = {
   roomTypeName: string;
   totalRooms: number;
   availableRooms: number;
+  displayName?: string | null;
+  residenceId?: string | null;
 };
 
 export type Residence = {
   id: string;
   name: string;
+  slug?: string | null;
+  active?: boolean;
+  acceptingApplications?: boolean;
+  advertisedCapacity?: number | null;
+  maleCapacity?: number | null;
+  femaleCapacity?: number | null;
+  allowedGenders?: string[];
+  allowedInstitutions?: string[];
+  websiteUrl?: string | null;
+  applicationEmail?: string | null;
+  phone?: string | null;
+  logoUrl?: string | null;
+  imageUrls?: string[];
   address: string;
   residenceType: string;
   totalRooms: number;
@@ -75,8 +90,8 @@ export type Residence = {
   description: string;
   facilities: string[];
   amenities: string[];
-  distanceToNWU: number;
-  distanceToShoppingCentre: number;
+  distanceToNWU: number | null;
+  distanceToShoppingCentre: number | null;
   occupiedRooms?: number;
 };
 
@@ -176,6 +191,9 @@ export type Application = {
   fundingType?: string;
   fundingReference?: string;
   hasMedicalConditions: boolean;
+  hasChronicMedication?: boolean;
+  chronicMedicationDetails?: string | null;
+  guardianRelationship?: string | null;
   additionalInformation?: string;
   specialRequirements?: string;
   adminNotes?: string;

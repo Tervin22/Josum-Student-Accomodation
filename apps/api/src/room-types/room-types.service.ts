@@ -5,8 +5,6 @@ import { AuditService } from '../audit/audit.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { UpdateRoomTypeDto } from './dto/update-room-type.dto';
 
-const DEFAULT_ROOM_TYPES = ['Single Room'];
-
 @Injectable()
 export class RoomTypesService {
   constructor(
@@ -15,17 +13,22 @@ export class RoomTypesService {
     private readonly config: ConfigService,
   ) {}
 
-  async listRoomTypes() {
-    await this.ensureDefaultRoomTypes();
-    await this.syncSingleRoomInventory();
-    return this.prisma.roomType.findMany({
-      where: { roomTypeName: { in: DEFAULT_ROOM_TYPES } },
+  async listRoomTypes(residenceId?: string, includeArchived = false) {
+    const types = await this.prisma.roomType.findMany({
+      where: { ...(residenceId ? { residenceId } : {}), ...(!includeArchived ? { residence: { active: true } } : {}) },
       orderBy: { roomTypeName: 'asc' },
     });
+    return Promise.all(types.map(async type => {
+      const where = { residenceId: type.residenceId ?? undefined, roomTypeName: type.displayName ?? type.roomTypeName };
+      const [totalRooms, availableRooms] = await Promise.all([
+        this.prisma.residenceRoom.count({ where }),
+        this.prisma.residenceRoom.count({ where: { ...where, status: 'AVAILABLE' } }),
+      ]);
+      return { ...type, totalRooms, availableRooms };
+    }));
   }
 
   async updateRoomType(actorId: string, id: string, dto: UpdateRoomTypeDto) {
-    await this.ensureDefaultRoomTypes();
     const current = await this.prisma.roomType.findUnique({ where: { id } });
     if (!current) {
       throw new NotFoundException('Room type not found');
@@ -37,11 +40,12 @@ export class RoomTypesService {
 
     this.assertRoomUpdatePasscode(dto.passcode);
 
-    const totalRooms = await this.prisma.residenceRoom.count();
+    const where = { residenceId: current.residenceId ?? undefined, roomTypeName: current.displayName ?? current.roomTypeName };
+    const totalRooms = await this.prisma.residenceRoom.count({ where });
     if (dto.totalRooms !== totalRooms) {
       throw new BadRequestException('Room totals are determined by the numbered room inventory');
     }
-    const availableRooms = await this.prisma.residenceRoom.count({ where: { status: 'AVAILABLE' } });
+    const availableRooms = await this.prisma.residenceRoom.count({ where: { ...where, status: 'AVAILABLE' } });
 
     const roomType = await this.prisma.roomType.update({
       where: { id },
@@ -65,36 +69,6 @@ export class RoomTypesService {
   validateRoomUpdatePasscode(passcode: string) {
     this.assertRoomUpdatePasscode(passcode);
     return { ok: true };
-  }
-
-  private async ensureDefaultRoomTypes() {
-    const existing = await this.prisma.roomType.findMany({
-      where: { roomTypeName: { in: DEFAULT_ROOM_TYPES } },
-      select: { roomTypeName: true },
-    });
-    const existingNames = new Set(existing.map((roomType) => roomType.roomTypeName));
-    const missing = DEFAULT_ROOM_TYPES.filter((roomTypeName) => !existingNames.has(roomTypeName));
-    if (!missing.length) return;
-
-    await this.prisma.roomType.createMany({
-      data: missing.map((roomTypeName) => ({
-        roomTypeName,
-        totalRooms: 0,
-        availableRooms: 0,
-      })),
-      skipDuplicates: true,
-    });
-  }
-
-  private async syncSingleRoomInventory() {
-    const [totalRooms, availableRooms] = await Promise.all([
-      this.prisma.residenceRoom.count(),
-      this.prisma.residenceRoom.count({ where: { status: 'AVAILABLE' } }),
-    ]);
-    await this.prisma.roomType.update({
-      where: { roomTypeName: 'Single Room' },
-      data: { totalRooms, availableRooms },
-    });
   }
 
   private assertRoomUpdatePasscode(passcode: string) {

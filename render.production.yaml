@@ -1,0 +1,107 @@
+# Paid production baseline. Configure all sync:false fields before deployment.
+# Confirm region, costs and cross-border processing with the client first.
+databases:
+  - name: residence-postgres
+    databaseName: student_residences
+    user: residence_app
+    plan: 0.5c-1g
+    postgresMajorVersion: "18"
+    region: frankfurt
+    ipAllowList: []
+
+services:
+  - type: web
+    name: residence-api
+    runtime: docker
+    dockerfilePath: ./apps/api/Dockerfile
+    dockerContext: .
+    plan: starter
+    region: frankfurt
+    numInstances: 1
+    healthCheckPath: /health/ready
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: API_PORT
+        value: 4000
+      - key: APP_NAME
+        value: Student Residence Portal
+      - key: PUBLIC_APP_URL
+        sync: false
+      - key: WEB_ORIGIN
+        sync: false
+      - key: DATABASE_URL
+        fromDatabase:
+          name: residence-postgres
+          property: connectionString
+      - key: JWT_ACCESS_SECRET
+        generateValue: true
+      - key: JWT_REFRESH_SECRET
+        generateValue: true
+      - key: ENABLE_ADMIN_BOOTSTRAP
+        value: "false"
+      - key: INSTALLATION_ADMIN_TOKEN
+        generateValue: true
+      - key: FACTORY_RESET_RECOVERY_KEY
+        generateValue: true
+      - key: STAFF_MANAGER_REGISTRATION_KEY
+        generateValue: true
+      - key: STAFF_SECURITY_REGISTRATION_KEY
+        generateValue: true
+      - key: STAFF_TECHNICIAN_REGISTRATION_KEY
+        generateValue: true
+      - key: SMTP_HOST
+        sync: false
+      - key: SMTP_PORT
+        value: 587
+      - key: SMTP_SECURE
+        value: "false"
+      - key: SMTP_USER
+        sync: false
+      - key: SMTP_PASSWORD
+        sync: false
+      - key: SMTP_FROM
+        sync: false
+      - key: STORAGE_DRIVER
+        value: s3
+      - key: S3_USE_IAM_ROLE
+        value: "false"
+      - key: S3_BUCKET
+        sync: false
+      - key: S3_REGION
+        sync: false
+      - key: S3_ENDPOINT
+        sync: false
+      - key: S3_ACCESS_KEY_ID
+        sync: false
+      - key: S3_SECRET_ACCESS_KEY
+        sync: false
+      - key: S3_FORCE_PATH_STYLE
+        value: "false"
+      - key: ENABLE_SWAGGER
+        value: "false"
+
+  - type: web
+    name: residence-web
+    runtime: docker
+    dockerfilePath: ./apps/web/Dockerfile
+    dockerContext: .
+    plan: starter
+    region: frankfurt
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 3000
+      - key: HOSTNAME
+        value: 0.0.0.0
+      - key: NEXT_PUBLIC_API_URL
+        fromService:
+          name: residence-api
+          type: web
+          envVarKey: RENDER_EXTERNAL_URL
+      - key: NEXT_PUBLIC_BRAND_LOGO_URL
+        value: /logo.svg
+      - key: NEXT_PUBLIC_AUTH_HERO_IMAGE_URL
+        value: https://romares.co.za/wp-content/uploads/2026/09/exterior-1.jpg

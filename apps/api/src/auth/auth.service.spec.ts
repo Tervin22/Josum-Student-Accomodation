@@ -20,6 +20,7 @@ const registerStudentDto: RegisterStudentDto = {
 
 function createService() {
   const prisma = {
+    userRole: { count: jest.fn().mockResolvedValue(0) },
     user: {
       findUnique: jest.fn(),
       update: jest.fn(),
@@ -63,10 +64,27 @@ function createService() {
     jwt,
     mail,
     audit,
+    config,
   };
 }
 
 describe('AuthService terminated student access', () => {
+  it('does not permit bootstrap when the installation switch is disabled', async () => {
+    const { service, config, prisma } = createService();
+    config.get.mockImplementation((key: string) => key === 'ENABLE_ADMIN_BOOTSTRAP' ? false as never : 'test-secret');
+    await expect(service.bootstrapAdmin({ bootstrapToken: 'test-secret' } as never)).rejects.toThrow('bootstrap is disabled');
+    expect(prisma.$transaction).not.toHaveBeenCalled();
+  });
+
+  it('rechecks administrator creation under a database lock', async () => {
+    const { service, prisma } = createService();
+    prisma.user.findUnique.mockResolvedValue(null);
+    const tx = { $queryRaw: jest.fn().mockResolvedValue([]), userRole: { count: jest.fn().mockResolvedValue(1) }, role: { upsert: jest.fn() } };
+    prisma.$transaction.mockImplementation(callback => callback(tx));
+    await expect(service.bootstrapAdmin({ email: 'new@example.invalid', password: 'StrongPass123!', bootstrapToken: 'test-secret' } as never)).rejects.toThrow('already complete');
+    expect(tx.$queryRaw).toHaveBeenCalledTimes(1);
+    expect(tx.role.upsert).not.toHaveBeenCalled();
+  });
   afterEach(() => {
     jest.restoreAllMocks();
   });

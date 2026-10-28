@@ -21,8 +21,8 @@ COPY --from=base /app /app
 WORKDIR /app/apps/web
 
 ARG NEXT_PUBLIC_API_URL
-ARG NEXT_PUBLIC_BRAND_LOGO_URL=https://josumres.co.za/wp-content/uploads/2025/08/Josum-Company-Logo-Final-Homepage.png
-ARG NEXT_PUBLIC_AUTH_HERO_IMAGE_URL=https://josumres.co.za/wp-content/uploads/2025/08/WhatsApp-Image-2025-07-24-at-15.32.24_7cd2a337.jpg
+ARG NEXT_PUBLIC_BRAND_LOGO_URL=/logo.svg
+ARG NEXT_PUBLIC_AUTH_HERO_IMAGE_URL=https://romares.co.za/wp-content/uploads/2026/09/exterior-1.jpg
 ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
 ENV NEXT_PUBLIC_BRAND_LOGO_URL=$NEXT_PUBLIC_BRAND_LOGO_URL
 ENV NEXT_PUBLIC_AUTH_HERO_IMAGE_URL=$NEXT_PUBLIC_AUTH_HERO_IMAGE_URL
@@ -36,6 +36,7 @@ WORKDIR /app
 
 ENV NODE_ENV=production
 ENV PORT=3000
+ENV HOSTNAME=0.0.0.0
 
 RUN addgroup -S nodejs && adduser -S nextjs -G nodejs
 

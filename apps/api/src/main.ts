@@ -8,6 +8,7 @@ import { NextFunction, Request, Response } from 'express';
 import helmet from 'helmet';
 import { AppModule } from './app.module';
 import { SafeExceptionFilter } from './common/filters/safe-exception.filter';
+import { allowedCorsOrigin } from './common/security/cors-policy';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, { bufferLogs: true });
@@ -71,28 +72,10 @@ async function bootstrap() {
     .split(',')
     .map((origin) => origin.trim())
     .filter(Boolean);
-  const allowedOrigins = new Set([
-    ...configuredOrigins,
-    'http://localhost:3000',
-    'http://127.0.0.1:3000',
-    'http://[::1]:3000',
-    'http://localhost:3001',
-    'http://127.0.0.1:3001',
-    'http://[::1]:3001',
-  ]);
-  const allowLocalDevOrigin = (origin: string) => {
-    if (config.get<string>('NODE_ENV') === 'production') return false;
-    try {
-      const url = new URL(origin);
-      return url.protocol === 'http:' && ['3000', '3001'].includes(url.port);
-    } catch {
-      return false;
-    }
-  };
 
   app.enableCors({
     origin(origin, callback) {
-      if (!origin || allowedOrigins.has(origin) || allowLocalDevOrigin(origin)) {
+      if (allowedCorsOrigin(origin, configuredOrigins, isProduction)) {
         callback(null, true);
         return;
       }
@@ -115,7 +98,7 @@ async function bootstrap() {
 
   if (!isProduction || config.get<string>('ENABLE_SWAGGER') === 'true') {
     const openApi = new DocumentBuilder()
-      .setTitle('Josum Student Accommodation API')
+      .setTitle('Student Residence Portal API')
       .setDescription('Multi-residence applications, availability, documents, notifications, and administration.')
       .setVersion('1.0.0')
       .addBearerAuth()

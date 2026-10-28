@@ -40,10 +40,13 @@ export default function LoginPage() {
   const [activePortal, setActivePortal] = useState<Portal | null>(null);
   const [bootstrapOpen, setBootstrapOpen] = useState(false);
   const [staffRegisterOpen, setStaffRegisterOpen] = useState(false);
+  const [registrationHref, setRegistrationHref] = useState('/register');
 
   useEffect(() => {
     const applyQueryState = () => {
       const params = new URLSearchParams(window.location.search);
+      const residenceId = params.get('residenceId');
+      setRegistrationHref(residenceId ? `/register?residenceId=${encodeURIComponent(residenceId)}` : '/register');
       if (params.get('reset') === 'success') {
         toast.success('System restored to its initial state');
       }
@@ -219,10 +222,10 @@ export default function LoginPage() {
             Bedworth Park student accommodation
           </div>
           <h1 className="mt-6 max-w-[18rem] break-words text-3xl font-bold leading-tight min-[420px]:max-w-3xl sm:text-5xl lg:text-6xl">
-            Live, learn, and prosper at Josum.
+            Botlogile, Mohunathagi and Roma.
           </h1>
           <p className="mt-5 max-w-[20rem] break-words text-base leading-7 text-white/82 min-[420px]:max-w-2xl sm:text-lg">
-            Choose between Josum 1 and Josum 2, apply online, upload your documents, and follow every application update in one place.
+            Choose your residence, complete its application and track your accommodation offer.
           </p>
           <div className="mt-8 grid gap-3 sm:flex sm:flex-wrap">
             <button
@@ -253,7 +256,7 @@ export default function LoginPage() {
 
         <div className="mt-10 grid gap-3 text-sm text-white/90 sm:mt-12 sm:grid-cols-3">
           {[
-            ['Two residences, one application', 'Compare Josum 1 and Josum 2 before choosing where to apply.'],
+            ['Five locations, one portal', 'Choose Botlogile 1 or 2, Mohunathagi Village North or South, or Res Roma.'],
             ['Digital documents', 'Students can attach supporting files to applications.'],
             ['Status notifications', 'Applicants receive email updates as applications move.'],
           ].map(([title, body]) => (
@@ -310,7 +313,7 @@ export default function LoginPage() {
                   </button>
                 </form>
                 <div className="mt-5 grid gap-3 text-sm sm:flex sm:flex-wrap sm:items-center">
-                  <Link href="/register" className="inline-flex items-center gap-2 font-semibold text-accent hover:underline">
+                  <Link href={registrationHref} className="inline-flex items-center gap-2 font-semibold text-accent hover:underline">
                     <UserPlus className="h-4 w-4" />
                     Create student account
                   </Link>

@@ -251,7 +251,7 @@ export function SystemGuideChatbot() {
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="focus-ring fixed bottom-3 right-3 z-[60] grid h-28 w-28 place-items-center rounded-full bg-transparent p-0 transition hover:-translate-y-1 sm:bottom-5 sm:right-5 sm:h-32 sm:w-32"
+        className="focus-ring fixed bottom-3 right-3 z-[60] grid h-14 w-14 place-items-center rounded-full bg-transparent p-0 transition hover:-translate-y-1 sm:bottom-5 sm:right-5 sm:h-20 sm:w-20"
         aria-label="Open system guide"
         title="Open system guide"
       >
@@ -640,7 +640,7 @@ function getStaffReply(question: string, mode: StaffGuideMode): Pick<GuideMessag
     }
     return {
       text: mode === 'admin'
-        ? 'Use Applications to filter by Josum 1 or Josum 2, open a reference, review the selected residence and student documents, update the status, add a note, and save internal admin notes.'
+        ? 'Use Applications to filter by residence, open a reference, review the selected location and student documents, update the status, add a note, and save internal admin notes.'
         : 'Use the Manager Dashboard to review application status, document completeness, occupancy, and student-facing notes.',
       actions: [
         ...(mode === 'manager' ? [managerNavigationActions[1], managerNavigationActions[0]] : [adminNavigationActions[1], adminNavigationActions[0]]),
@@ -651,8 +651,8 @@ function getStaffReply(question: string, mode: StaffGuideMode): Pick<GuideMessag
   if (matches(question, ['room', 'rooms', 'availability', 'total', 'passcode', 'single', 'sharing'])) {
     return {
       text: mode === 'admin'
-        ? 'Use Rooms to manage every numbered room at Josum 1 and Josum 2 as Available, Reserved, Occupied, or Maintenance. Assign an available gender-compatible room before approving an application.'
-        : 'Use the Manager Dashboard to monitor room availability and residence occupancy across Josum 1 and Josum 2.',
+        ? 'Use Rooms to add confirmed numbered rooms for each location and manage availability. Published capacity is not live inventory. Assign an available gender-compatible room at the selected residence before approving an application.'
+        : 'Use the Manager Dashboard to add confirmed rooms and monitor availability by residence.',
       actions: mode === 'manager' ? [managerNavigationActions[0]] : [adminNavigationActions[3]],
     };
   }
@@ -728,7 +728,7 @@ function getStaffReply(question: string, mode: StaffGuideMode): Pick<GuideMessag
 
 function getStudentTourReply(): Pick<GuideMessage, 'text' | 'actions'> {
   return {
-    text: 'Student path:\n1. Explore Josum 1 and Josum 2, then create an account or sign in.\n2. Check Profile and complete missing details.\n3. Open Apply, select a residence, review the rates and terms, then submit the form.\n4. Upload required documents.\n5. Track status from Overview and use Maintenance for residence issues.',
+    text: 'Student path:\n1. Choose Botlogile 1, Botlogile 2, Mohunathagi Village North, Mohunathagi Village South or Res Roma, then sign in or register.\n2. Complete your profile.\n3. Apply to your selected location using its institution and gender options.\n4. Upload the supporting documents shown for your application.\n5. Track the review and accept an approved room offer before its expiry. Confirm current rental and payment details with residence management.',
     actions: [
       ...publicNavigationActions.slice(0, 2),
       studentNavigationActions[4],

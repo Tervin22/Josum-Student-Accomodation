@@ -1,40 +1,54 @@
+# Temporary client testing: all resources must stay on the free plan.
+# The paid production template is preserved as render.production.yaml.
 databases:
-  - name: nathi-db
+  - name: josum-client-test-db-20261028
+    databaseName: residence_preview
+    user: preview_app
     plan: free
-    databaseName: louiseville_accommodation
-    user: louiseville
+    postgresMajorVersion: "18"
+    region: frankfurt
+    ipAllowList: []
 
 services:
   - type: web
-    name: nathi-api
-    runtime: docker
-    dockerfilePath: ./apps/api/Dockerfile
-    dockerContext: .
+    name: josum-client-test-api-20261028-tervin22
+    branch: codex/client-preview-20261028
+    runtime: node
     plan: free
-    healthCheckPath: /health
+    region: frankfurt
+    buildCommand: corepack pnpm install --frozen-lockfile --prod=false && corepack pnpm --filter @josum/api prisma:generate && corepack pnpm --filter @josum/api build
+    startCommand: corepack pnpm --filter @josum/api prisma:migrate:deploy && corepack pnpm --filter @josum/api prisma:seed && corepack pnpm --filter @josum/api start
+    healthCheckPath: /health/ready
+    autoDeployTrigger: "off"
     envVars:
+      - key: NODE_VERSION
+        value: "22"
       - key: NODE_ENV
         value: production
+      - key: API_PORT
+        value: "10000"
+      - key: TS_NODE_TRANSPILE_ONLY
+        value: "true"
+      - key: CLIENT_PREVIEW_MODE
+        value: "true"
       - key: APP_NAME
-        value: "Josum Student Accommodation"
-      - key: BRAND_LOGO_URL
-        value: https://josumres.co.za/wp-content/uploads/2025/08/Josum-Company-Logo-Final-Homepage.png
+        value: Student Residence Portal Client Testing
       - key: DATABASE_URL
         fromDatabase:
-          name: nathi-db
+          name: josum-client-test-db-20261028
           property: connectionString
-      - key: API_PORT
-        value: 4000
+      - key: PUBLIC_APP_URL
+        value: https://josum-client-test-20261028-tervin22.onrender.com
       - key: WEB_ORIGIN
-        sync: false
+        value: https://josum-client-test-20261028-tervin22.onrender.com
+      - key: ENABLE_ADMIN_BOOTSTRAP
+        value: "false"
+      - key: ENABLE_SWAGGER
+        value: "false"
       - key: JWT_ACCESS_SECRET
         generateValue: true
       - key: JWT_REFRESH_SECRET
         generateValue: true
-      - key: JWT_ACCESS_EXPIRES_IN
-        value: 15m
-      - key: JWT_REFRESH_EXPIRES_IN
-        value: 7d
       - key: INSTALLATION_ADMIN_TOKEN
         generateValue: true
       - key: FACTORY_RESET_RECOVERY_KEY
@@ -45,64 +59,42 @@ services:
         generateValue: true
       - key: STAFF_TECHNICIAN_REGISTRATION_KEY
         generateValue: true
-      - key: BCRYPT_ROUNDS
-        value: 12
-      - key: THROTTLE_TTL_MS
-        value: 60000
-      - key: THROTTLE_LIMIT
-        value: 120
-      - key: APPLICATION_APPROVAL_EXPIRY_HOURS
-        value: 72
-      - key: MAINTENANCE_ACK_SLA_HOURS
-        value: 24
-      - key: MAINTENANCE_LOW_RESOLUTION_SLA_HOURS
-        value: 48
-      - key: MAINTENANCE_HIGH_RESOLUTION_SLA_HOURS
-        value: 12
-      - key: MAINTENANCE_SLA_SWEEP_INTERVAL_MS
-        value: 300000
-      - key: PAYMENT_REMINDER_SWEEP_INTERVAL_MS
-        value: 3600000
-      - key: PAYMENT_REMINDER_BATCH_SIZE
-        value: 500
       - key: SMTP_HOST
-        sync: false
+        value: 127.0.0.1
       - key: SMTP_PORT
-        value: 587
+        value: "2525"
       - key: SMTP_SECURE
-        value: true
-      - key: SMTP_USER
-        sync: false
-      - key: SMTP_PASSWORD
-        sync: false
+        value: "false"
       - key: SMTP_FROM
-        value: "Josum Student Accommodation <no-reply@josum.example>"
+        value: preview@example.invalid
       - key: STORAGE_DRIVER
         value: local
       - key: LOCAL_STORAGE_PATH
-        value: /app/uploads
-      - key: MAX_UPLOAD_BYTES
-        value: 10485760
-      - key: STORAGE_MAX_ITEM_IMAGES
-        value: 6
-      - key: ALLOWED_UPLOAD_MIME_TYPES
-        value: application/pdf,image/jpeg,image/png
+        value: /tmp/residence-preview-uploads
 
   - type: web
-    name: nathi-web
-    runtime: docker
-    dockerfilePath: ./apps/web/Dockerfile
-    dockerContext: .
+    name: josum-client-test-20261028-tervin22
+    branch: codex/client-preview-20261028
+    runtime: node
     plan: free
+    region: frankfurt
+    buildCommand: corepack pnpm install --frozen-lockfile --prod=false && corepack pnpm --filter @josum/web build
+    startCommand: corepack pnpm --filter @josum/web exec next start --hostname 0.0.0.0 --port $PORT
+    healthCheckPath: /health
+    autoDeployTrigger: "off"
     envVars:
+      - key: NODE_VERSION
+        value: "22"
       - key: NODE_ENV
         value: production
-      - key: NEXT_PUBLIC_BRAND_LOGO_URL
-        value: https://josumres.co.za/wp-content/uploads/2025/08/Josum-Company-Logo-Final-Homepage.png
-      - key: NEXT_PUBLIC_AUTH_HERO_IMAGE_URL
-        value: https://josumres.co.za/wp-content/uploads/2025/08/WhatsApp-Image-2025-07-24-at-15.32.24_7cd2a337.jpg
+      - key: NEXT_PUBLIC_CLIENT_PREVIEW_MODE
+        value: "true"
       - key: NEXT_PUBLIC_API_URL
         fromService:
-          name: nathi-api
+          name: josum-client-test-api-20261028-tervin22
           type: web
           envVarKey: RENDER_EXTERNAL_URL
+      - key: NEXT_PUBLIC_BRAND_LOGO_URL
+        value: /logo.svg
+      - key: NEXT_PUBLIC_AUTH_HERO_IMAGE_URL
+        value: https://romares.co.za/wp-content/uploads/2026/09/exterior-1.jpg

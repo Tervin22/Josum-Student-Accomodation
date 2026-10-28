@@ -8,6 +8,7 @@ coverage
 .env.*
 !.env.example
 !.env.local.example
+!.env.production.example
 apps/**/.env
 apps/**/.env.*
 !apps/**/.env.example
@@ -24,3 +25,9 @@ tools/postgresql/
 tools/ffmpeg-download/
 tools/downloads/
 compressed/
+
+# Restricted client handover credentials must never be committed.
+output/confidential/
+output/handover-private/
+output/Josum_Production_Handover_*/
+output/Josum_Production_Handover_*.zip

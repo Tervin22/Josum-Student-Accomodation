@@ -7,7 +7,6 @@ import { StorageService } from '../storage/storage.service';
 
 export const SESSION_INVALIDATED_BEFORE_KEY = 'sessionInvalidatedBefore';
 
-const DEFAULT_ROOM_TYPES = ['Single Room'];
 const RESET_STAFF_ROLES: RoleName[] = [RoleName.MANAGER, RoleName.SECURITY, RoleName.TECHNICIAN];
 
 @Injectable()
@@ -82,16 +81,7 @@ export class FactoryResetService {
         },
       });
 
-      await Promise.all(
-        DEFAULT_ROOM_TYPES.map((roomTypeName) =>
-          tx.roomType.upsert({
-            where: { roomTypeName },
-            create: { roomTypeName, totalRooms: 0, availableRooms: 0 },
-            update: {},
-          }),
-        ),
-      );
-      await tx.roomType.deleteMany({ where: { roomTypeName: { notIn: DEFAULT_ROOM_TYPES } } });
+      // Keep residence-specific categories and physical room metadata on reset.
       const roomTypes = await tx.roomType.findMany({ select: { id: true, totalRooms: true } });
       await Promise.all(
         roomTypes.map((roomType) =>
@@ -111,12 +101,7 @@ export class FactoryResetService {
         ),
       );
       await tx.residenceRoom.updateMany({
-        data: { status: 'AVAILABLE', roomTypeName: 'Single Room', capacity: 1 },
-      });
-      const totalRooms = await tx.residenceRoom.count();
-      await tx.roomType.update({
-        where: { roomTypeName: 'Single Room' },
-        data: { totalRooms, availableRooms: totalRooms },
+        data: { status: 'AVAILABLE' },
       });
 
       return deleted;

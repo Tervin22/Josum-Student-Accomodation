@@ -22,10 +22,11 @@ COPY --from=build --chown=nestjs:nodejs /app/package.json ./package.json
 COPY --from=build --chown=nestjs:nodejs /app/pnpm-workspace.yaml ./pnpm-workspace.yaml
 COPY --from=build --chown=nestjs:nodejs /app/apps/api/node_modules ./apps/api/node_modules
 COPY --from=build --chown=nestjs:nodejs /app/apps/api/package.json ./apps/api/package.json
+COPY --from=build --chown=nestjs:nodejs /app/apps/api/tsconfig.json ./apps/api/tsconfig.json
 COPY --from=build --chown=nestjs:nodejs /app/apps/api/dist ./apps/api/dist
 COPY --from=build --chown=nestjs:nodejs /app/apps/api/prisma ./apps/api/prisma
 RUN mkdir -p /app/uploads && chown -R nestjs:nodejs /app/uploads
 WORKDIR /app/apps/api
 USER nestjs
 EXPOSE 4000
-CMD ["sh", "-c", "npx prisma migrate deploy && pnpm start"]
+CMD ["sh", "-c", "npx prisma migrate deploy && pnpm prisma:seed && pnpm start"]

@@ -102,12 +102,12 @@ option {
 }
 
 .robot-avatar--launcher {
-  --size: 7rem;
+  --size: 3.5rem;
 }
 
 @media (min-width: 640px) {
   .robot-avatar--launcher {
-    --size: 8rem;
+    --size: 5rem;
   }
 }
 

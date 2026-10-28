@@ -38,11 +38,12 @@ export class MaintenanceService implements OnModuleInit, OnModuleDestroy {
   }
 
   async create(userId: string, dto: CreateMaintenanceRequestDto) {
-    if (dto.roomTypeId) {
-      const roomType = await this.prisma.roomType.findUnique({ where: { id: dto.roomTypeId } });
-      if (!roomType) {
-        throw new NotFoundException('Selected room type was not found');
-      }
+    const stay = await this.prisma.application.findFirst({ where: {
+      userId, status: 'APPROVED', acceptedAt: { not: null }, roomId: { not: null }, stayStatus: 'ACTIVE', terminatedAt: null,
+    }, orderBy: { acceptedAt: 'desc' }, include: { residence: true, room: true } });
+    if (!stay) throw new BadRequestException('An active accepted residence stay is required for maintenance');
+    if (dto.roomTypeId && dto.roomTypeId !== stay.roomTypeId) {
+      throw new BadRequestException('Maintenance must be linked to your allocated residence and category');
     }
 
     const now = new Date();
@@ -51,10 +52,10 @@ export class MaintenanceService implements OnModuleInit, OnModuleDestroy {
       data: {
         referenceCode: this.referenceCode(),
         userId,
-        roomTypeId: dto.roomTypeId,
+        roomTypeId: stay.roomTypeId,
         category: dto.category,
         priority,
-        location: this.clean(dto.location),
+        location: `${stay.residence.name} - ${this.clean(dto.location) ?? stay.room?.name ?? 'Communal area'}`,
         title: dto.title.trim(),
         description: dto.description.trim(),
         acknowledgementDeadlineAt: this.addHours(now, this.acknowledgementSlaHours()),

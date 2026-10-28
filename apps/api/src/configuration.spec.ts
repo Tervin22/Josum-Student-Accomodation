@@ -13,6 +13,7 @@ const developmentConfig = {
 const productionConfig = {
   ...developmentConfig,
   NODE_ENV: 'production',
+  ENABLE_ADMIN_BOOTSTRAP: 'true',
   JWT_ACCESS_SECRET: strongSecret('c'),
   JWT_REFRESH_SECRET: strongSecret('d'),
   INSTALLATION_ADMIN_TOKEN: strongSecret('e'),
@@ -32,6 +33,18 @@ const productionConfig = {
 };
 
 describe('validateEnvironment', () => {
+  it('allows the installation token to be removed after bootstrap is disabled', () => {
+    expect(validateEnvironment({ ...productionConfig, ENABLE_ADMIN_BOOTSTRAP: 'false', INSTALLATION_ADMIN_TOKEN: '' })).toMatchObject({ ENABLE_ADMIN_BOOTSTRAP: false });
+  });
+  it('disables bootstrap by default in production', () => {
+    expect(validateEnvironment({ ...productionConfig, ENABLE_ADMIN_BOOTSTRAP: undefined })).toMatchObject({ ENABLE_ADMIN_BOOTSTRAP: false });
+  });
+  it('rejects reuse of staff and recovery keys', () => {
+    expect(() => validateEnvironment({ ...productionConfig, STAFF_MANAGER_REGISTRATION_KEY: productionConfig.FACTORY_RESET_RECOVERY_KEY })).toThrow('Every production');
+  });
+  it('rejects implicit TLS on the STARTTLS port', () => {
+    expect(() => validateEnvironment({ ...productionConfig, SMTP_PORT: 587, SMTP_SECURE: 'true' })).toThrow('STARTTLS');
+  });
   it('requires the base runtime configuration', () => {
     expect(() =>
       validateEnvironment({

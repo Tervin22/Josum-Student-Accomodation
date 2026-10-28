@@ -25,6 +25,8 @@ type ReminderCandidate = {
   };
   residence: {
     name: string;
+    slug?: string | null;
+    monthlyRentCents?: number | null;
   };
   room: {
     name: string;
@@ -97,6 +99,8 @@ export class PaymentRemindersService implements OnModuleInit, OnModuleDestroy {
         residence: {
           select: {
             name: true,
+            slug: true,
+            monthlyRentCents: true,
           },
         },
         room: {
@@ -112,12 +116,19 @@ export class PaymentRemindersService implements OnModuleInit, OnModuleDestroy {
     let skipped = 0;
 
     for (const application of candidates) {
+      // Never reuse the legacy tariff for a newly onboarded residence.
+      if (application.residence.slug && !application.residence.monthlyRentCents) {
+        skipped += 1;
+        continue;
+      }
       if (!this.isSelfPaying(application.fundingType) || !this.firstDueMonthReached(application.acceptedAt, period)) {
         skipped += 1;
         continue;
       }
 
-      const reminder = await this.claimReminder(application, period);
+      const amountCents = application.residence.monthlyRentCents ?? 510000;
+      const amount = new Intl.NumberFormat('en-ZA', { style: 'currency', currency: 'ZAR' }).format(amountCents / 100);
+      const reminder = await this.claimReminder(application, period, amountCents);
       if (!reminder) {
         skipped += 1;
         continue;
@@ -130,6 +141,7 @@ export class PaymentRemindersService implements OnModuleInit, OnModuleDestroy {
         roomName: application.room?.name ?? 'Assigned room',
         studentNumber: application.studentNumber,
         paymentReference: application.studentNumber || application.referenceCode,
+        amount,
         appUrl: this.appUrl(),
       });
       const delivered = emailLog.status === 'SENT';
@@ -146,7 +158,7 @@ export class PaymentRemindersService implements OnModuleInit, OnModuleDestroy {
         data: {
           userId: application.userId,
           title: 'Monthly payment reminder',
-          body: `Accommodation payment reminder for ${this.periodLabel(period)}: R5100.`,
+          body: `${application.residence.name} accommodation reminder for ${this.periodLabel(period)}: ${amount}.`,
         },
       });
       await this.audit.log({
@@ -184,7 +196,7 @@ export class PaymentRemindersService implements OnModuleInit, OnModuleDestroy {
     return this.monthIndex(period) > this.monthIndex(accepted);
   }
 
-  private async claimReminder(application: ReminderCandidate, period: ReminderPeriod) {
+  private async claimReminder(application: ReminderCandidate, period: ReminderPeriod, amountCents: number) {
     try {
       return await this.prisma.paymentReminder.create({
         data: {
@@ -193,6 +205,7 @@ export class PaymentRemindersService implements OnModuleInit, OnModuleDestroy {
           periodYear: period.year,
           periodMonth: period.month,
           recipient: application.user.email,
+          amountCents,
         },
         select: { id: true },
       });

@@ -7,13 +7,14 @@ export class ResidencesService {
 
   list() {
     return this.prisma.residence.findMany({
+      where: { active: true },
       orderBy: { name: 'asc' },
     });
   }
 
   async getById(id: string) {
     const residence = await this.prisma.residence.findUnique({ where: { id } });
-    if (!residence) {
+    if (!residence || !residence.active) {
       throw new NotFoundException('Residence not found');
     }
     return residence;

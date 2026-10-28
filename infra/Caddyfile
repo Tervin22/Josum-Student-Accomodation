@@ -1,0 +1,11 @@
+{$PORTAL_HOST} {
+    encode zstd gzip
+    reverse_proxy web:3000
+}
+
+{$API_HOST} {
+    request_body {
+        max_size 25MB
+    }
+    reverse_proxy api:4000
+}

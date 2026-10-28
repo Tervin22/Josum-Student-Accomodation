@@ -30,18 +30,19 @@ if (-not $connection.TcpTestSucceeded) {
 
 $listeners = Get-NetTCPConnection -LocalPort 3000,4000 -State Listen -ErrorAction SilentlyContinue
 $processIds = $listeners | Select-Object -ExpandProperty OwningProcess -Unique
-foreach ($processId in $processIds) {
-  Stop-Process -Id $processId -Force -ErrorAction SilentlyContinue
-}
 if ($processIds) {
-  Write-Host "Stopped existing local server processes on ports 3000/4000."
+  throw "Ports 3000/4000 are already in use. Close the existing application servers before starting another instance. No process was stopped."
 }
 
 if (-not $SkipMigration) {
   corepack pnpm --filter "@josum/api" prisma:migrate:deploy
+  if ($LASTEXITCODE -ne 0) { throw "Database migration failed" }
+  corepack pnpm --filter "@josum/api" prisma:seed
+  if ($LASTEXITCODE -ne 0) { throw "Database catalogue setup failed" }
 }
 
 corepack pnpm --filter "@josum/api" build
+if ($LASTEXITCODE -ne 0) { throw "API build failed" }
 
 New-Item -ItemType Directory -Force -Path (Join-Path $root "logs") | Out-Null
 

@@ -7,6 +7,17 @@ jest.mock('../notifications/notifications.service', () => ({
 import { MaintenanceService } from './maintenance.service';
 
 describe('MaintenanceService', () => {
+  it('rejects maintenance submissions without an accepted active stay', async () => {
+    const prisma = { application: { findFirst: jest.fn().mockResolvedValue(null) } };
+    const service = new MaintenanceService(prisma as never, {} as never, {} as never, {} as never);
+    await expect(service.create('student', { category: 'ELECTRICAL', title: 'Light', description: 'Faulty ceiling light' })).rejects.toThrow('active accepted residence stay');
+  });
+
+  it('rejects a category from another residence', async () => {
+    const prisma = { application: { findFirst: jest.fn().mockResolvedValue({ roomTypeId: 'roma-type' }) } };
+    const service = new MaintenanceService(prisma as never, {} as never, {} as never, {} as never);
+    await expect(service.create('student', { roomTypeId: 'botlogile-type', category: 'ELECTRICAL', title: 'Light', description: 'Faulty ceiling light' })).rejects.toThrow('allocated residence');
+  });
   beforeEach(() => {
     jest.useFakeTimers();
     jest.setSystemTime(new Date('2026-07-28T08:20:00.000Z'));

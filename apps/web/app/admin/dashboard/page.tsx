@@ -28,6 +28,7 @@ import {
 import { AppShell, EmptyState, StatTile } from '@/components/AppShell';
 import { MaintenanceSlaPanel } from '@/components/MaintenanceSlaPanel';
 import { StatusBadge } from '@/components/StatusBadge';
+import { ConfirmedRoomForm } from '@/components/ConfirmedRoomForm';
 import { useToast } from '@/components/ToastProvider';
 import { api, clearSession, compactForm, downloadDocument, downloadFinanceExport, downloadInspectionAttachment, downloadInspectionExport, downloadStorageExport, downloadStorageFile, getSession, upload } from '@/lib/api';
 import { isMaintenanceSlaBreached } from '@/lib/maintenance-sla';
@@ -684,7 +685,7 @@ export default function AdminDashboardPage() {
                   <div className="mt-4 grid grid-cols-3 gap-3 border-t border-line pt-4 text-sm">
                     <p><span className="text-slate-500">Total</span><br /><strong className="text-lg">{residence.totalRooms}</strong></p>
                     <p><span className="text-slate-500">Available</span><br /><strong className="text-lg text-brand">{residence.availableRooms}</strong></p>
-                    <p><span className="text-slate-500">Occupied</span><br /><strong className="text-lg">{residence.occupiedRooms}</strong></p>
+                    <p><span className="text-slate-500">Allocated</span><br /><strong className="text-lg">{residence.occupiedRooms}</strong></p>
                   </div>
                 </div>
               ))}
@@ -823,6 +824,7 @@ export default function AdminDashboardPage() {
                               .filter(
                                 (room) =>
                                   room.residenceId === application.residence?.id &&
+                                  room.roomTypeName === (application.roomType?.displayName ?? application.roomType?.roomTypeName) &&
                                   (room.status === 'AVAILABLE' || room.id === application.room?.id) &&
                                   (!application.gender || room.genderAllocation === application.gender),
                               )
@@ -1562,7 +1564,8 @@ export default function AdminDashboardPage() {
                 <div className="flex items-start justify-between gap-3">
                   <div>
                     <h3 className="font-semibold text-ink">{residence.name}</h3>
-                    <p className="mt-1 text-sm text-slate-500">{residence.residenceType}</p>
+                    <p className="mt-1 text-sm text-slate-500">{residence.active === false ? 'Archived property' : residence.residenceType}</p>
+                    {residence.advertisedCapacity != null && <p className="mt-1 text-sm text-slate-500">Published capacity: {residence.advertisedCapacity}</p>}
                   </div>
                   <span className="rounded-full border border-brand/20 bg-teal-50 px-3 py-1 text-sm font-semibold text-brand">
                     {residence.availableRooms} available
@@ -1571,7 +1574,7 @@ export default function AdminDashboardPage() {
                 <div className="mt-4 grid grid-cols-3 gap-3 text-sm">
                   <p><span className="text-slate-500">Total</span><br />{residence.totalRooms}</p>
                   <p><span className="text-slate-500">Available</span><br />{residence.availableRooms}</p>
-                  <p><span className="text-slate-500">Approved</span><br />{residence.occupiedRooms}</p>
+                  <p><span className="text-slate-500">Allocated</span><br />{residence.occupiedRooms}</p>
                 </div>
               </div>
             ))}
@@ -1591,6 +1594,7 @@ export default function AdminDashboardPage() {
                     {residenceRooms.filter((room) => room.residenceId === residence.id && room.status === 'AVAILABLE').length} individually available
                   </span>
                 </div>
+                {hasAnyRole(sessionRoles, roomManagementRoles) && <ConfirmedRoomForm residence={residence} onCreated={load} />}
                 <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                   {residenceRooms
                     .filter((room) => room.residenceId === residence.id)
@@ -1638,8 +1642,8 @@ export default function AdminDashboardPage() {
           </div>
           <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-b border-line py-3">
             <div>
-              <p className="font-semibold text-ink">Single Room</p>
-              <p className="mt-1 text-sm text-slate-500">The only room category at Josum 1 and Josum 2.</p>
+              <p className="font-semibold text-ink">Residence-specific inventory</p>
+              <p className="mt-1 text-sm text-slate-500">Confirmed numbered rooms are separate from published property capacities.</p>
             </div>
             <p className="text-sm font-medium text-ink">
               {stats?.availableRooms ?? 0} of {stats?.totalRooms ?? 0} available
@@ -1782,7 +1786,7 @@ export default function AdminDashboardPage() {
               <label className="grid gap-1 text-sm font-medium text-ink">
                 Accommodation
                 <select name="residenceId" className="focus-ring h-10 rounded-lg border border-line px-2">
-                  <option value="">Both accommodations</option>
+                  <option value="">All residences</option>
                   {stats.residences.map((residence) => <option key={residence.id} value={residence.id}>{residence.name}</option>)}
                 </select>
               </label>
@@ -1810,7 +1814,7 @@ export default function AdminDashboardPage() {
                     </div>
                     <p className="mt-2 whitespace-pre-line text-slate-600">{item.message}</p>
                     <p className="mt-2 text-xs text-slate-500">
-                      {item.residence?.name ?? 'Both accommodations'} - {item.successCount}/{item.recipientCount} delivered - {formatDateTime(item.createdAt)}
+                      {item.residence?.name ?? 'All residences'} - {item.successCount}/{item.recipientCount} delivered - {formatDateTime(item.createdAt)}
                     </p>
                   </div>
                 ))}
@@ -2083,6 +2087,7 @@ function ApplicationDetailsModal({ application, onClose }: { application: Applic
 
             <DetailSection title="Guarantor details">
               <DetailField label="Full names" value={application.guarantorFullName} />
+              <DetailField label="Guardian relationship" value={application.guardianRelationship} />
               <DetailField label="ID / Passport no" value={application.guarantorIdPassport} />
               <DetailField label="Cell no" value={application.guarantorCell} />
               <DetailField label="Email address" value={application.guarantorEmail} />
@@ -2097,6 +2102,8 @@ function ApplicationDetailsModal({ application, onClose }: { application: Applic
               <DetailField label="Next of kin 3" value={joinDetails(application.nextOfKin3Name, application.nextOfKin3Relationship, application.nextOfKin3Cell)} />
               <DetailField label="Medical details" value={application.medicalDetails} wide />
               <DetailField label="Medical condition declared" value={application.hasMedicalConditions ? 'Yes' : 'No'} />
+              <DetailField label="Chronic medication declared" value={application.hasChronicMedication ? 'Yes' : 'No'} />
+              <DetailField label="Chronic medication details" value={application.chronicMedicationDetails} wide />
               <DetailField label="Funding reference / bursary" value={application.fundingReference} wide />
               <DetailField label="Additional information" value={application.additionalInformation} wide />
               <DetailField label="Special requirements" value={application.specialRequirements} wide />

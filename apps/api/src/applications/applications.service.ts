@@ -13,6 +13,7 @@ import {
 import { CreateApplicationDto } from './dto/create-application.dto';
 import { ListApplicationsDto } from './dto/list-applications.dto';
 import { UpdateApplicationStatusDto } from './dto/update-application-status.dto';
+import { assertResidenceEligibility } from '../residences/residence-policy';
 
 type ApplicationNotificationSource = {
   userId: string;
@@ -94,20 +95,26 @@ export class ApplicationsService {
     if (!residence) {
       throw new NotFoundException('Selected residence is not available');
     }
-    if (residence.residenceType.toLowerCase().includes('girls only') && dto.gender !== 'Female') {
-      throw new ConflictException(`${residence.name} is a girls-only residence`);
+    assertResidenceEligibility(residence, dto.gender, dto.institutionName);
+    if (roomType.residenceId !== residence.id && (residence.slug || roomType.residenceId)) {
+      throw new ConflictException('Room category does not belong to the selected residence');
     }
+    if (dto.hasMedicalConditions && !dto.medicalDetails?.trim()) throw new ConflictException('Provide details of the declared medical conditions');
+    if (dto.hasChronicMedication && !dto.chronicMedicationDetails?.trim()) throw new ConflictException('Provide chronic medication details');
     if (returningStudent && storedItemsAwaitingCheckout) {
       throw new ConflictException(
         `Request checkout of stored items before submitting a returning-room application. Storage request ${storedItemsAwaitingCheckout.referenceCode} is currently ${storedItemsAwaitingCheckout.status.replaceAll('_', ' ')}.`,
       );
     }
-    if (returningStudent && !selectedRoom) {
+    if (returningStudent && !selectedRoom && !residence.slug) {
       throw new ConflictException('Returning students must choose their preferred room');
     }
     if (selectedRoom) {
       if (selectedRoom.residenceId !== residence.id) {
         throw new ConflictException('Selected room does not belong to the selected residence');
+      }
+      if (selectedRoom.roomTypeName !== (roomType.displayName ?? roomType.roomTypeName)) {
+        throw new ConflictException('Selected room does not match the requested room category');
       }
       if (selectedRoom.status !== 'AVAILABLE') {
         throw new ConflictException(`${selectedRoom.name} is not currently available`);
@@ -127,14 +134,24 @@ export class ApplicationsService {
       );
     }
 
-    const application = await this.prisma.application.create({
+    const application = await this.prisma.$transaction(async tx => {
+      // Prevent simultaneous submissions to different residences for the same student.
+      const keys = [`user:${userId}`, `student:${dto.studentNumber.trim().toLowerCase()}`, `identity:${dto.studentIdNumber.trim().toLowerCase()}`].sort();
+      for (const key of keys) await tx.$queryRaw(Prisma.sql`SELECT 1 AS locked FROM pg_advisory_xact_lock(hashtextextended(${key}, 0))`);
+      const concurrent = await tx.application.findFirst({ where: {
+        status: { notIn: [ApplicationStatus.REJECTED, ApplicationStatus.CANCELLED, ApplicationStatus.MOVED_OUT] },
+        OR: [{ userId }, { studentNumber: { equals: dto.studentNumber.trim(), mode: 'insensitive' } },
+          { studentIdNumber: { equals: dto.studentIdNumber.trim(), mode: 'insensitive' } }],
+      } });
+      if (concurrent) throw new ConflictException(`Duplicate application detected: active application ${concurrent.referenceCode} already exists`);
+      return tx.application.create({
       data: {
         referenceCode: this.referenceCode(),
         userId,
         roomTypeId: dto.roomTypeId,
         residenceId: dto.residenceId,
         roomId: selectedRoom?.id,
-        isNwuStudent: dto.isNwuStudent,
+        isNwuStudent: dto.institutionName.trim() === 'NWU (Vaal Triangle)',
         studyYear: dto.studyYear,
         studySemester: dto.studySemester,
         returningStudent,
@@ -156,6 +173,9 @@ export class ApplicationsService {
         fundingType: dto.fundingType,
         fundingReference: this.clean(dto.fundingReference),
         hasMedicalConditions: dto.hasMedicalConditions,
+        hasChronicMedication: dto.hasChronicMedication ?? false,
+        chronicMedicationDetails: this.clean(dto.chronicMedicationDetails),
+        guardianRelationship: this.clean(dto.guardianRelationship),
         additionalInformation: this.clean(dto.additionalInformation),
         specialRequirements: dto.specialRequirements,
         guarantorFullName: this.clean(dto.guarantorFullName),
@@ -190,6 +210,7 @@ export class ApplicationsService {
         },
       },
       include: this.applicationInclude,
+      });
     });
 
     void this.sendApplicationCreatedNotifications(application).catch((error) =>
@@ -255,7 +276,15 @@ export class ApplicationsService {
       throw new ConflictException('This accommodation offer has expired');
     }
 
-    const accepted = await this.prisma.application.update({
+    const accepted = await this.prisma.$transaction(async tx => {
+      await tx.$queryRaw(Prisma.sql`SELECT id FROM "Residence" WHERE id = ${application.residenceId}::uuid FOR UPDATE`);
+      const current = await tx.application.findUnique({ where: { id }, include: this.applicationInclude });
+      if (!current || current.status !== ApplicationStatus.APPROVED ||
+          (!current.acceptedAt && current.approvalExpiresAt && current.approvalExpiresAt.getTime() <= Date.now())) {
+        throw new ConflictException('This accommodation offer is no longer available');
+      }
+      if (current.acceptedAt) return current;
+      return tx.application.update({
       where: { id },
       data: {
         acceptedAt: new Date(),
@@ -269,6 +298,7 @@ export class ApplicationsService {
         },
       },
       include: this.applicationInclude,
+      });
     });
 
     await this.audit.log({
@@ -349,14 +379,19 @@ export class ApplicationsService {
     const documentsSatisfiedAt = applicationDocumentsComplete(before) ? before.documentsSatisfiedAt ?? new Date() : before.documentsSatisfiedAt;
 
     const application = await this.prisma.$transaction(async (tx) => {
+      // Serialise allocation, release and room-status changes within a residence.
+      await tx.$queryRaw(Prisma.sql`SELECT "id" FROM "Residence" WHERE "id" = ${before.residenceId}::uuid FOR UPDATE`);
+      const lockedApplication = await tx.application.findUnique({ where: { id } });
+      if (!lockedApplication || lockedApplication.status !== before.status || lockedApplication.roomId !== before.roomId ||
+          lockedApplication.acceptedAt?.getTime() !== before.acceptedAt?.getTime()) {
+        throw new ConflictException('The application changed while this action was pending. Refresh and try again.');
+      }
       const [currentResidence, currentRoomType, targetRoom] = await Promise.all([
         tx.residence.findUnique({
           where: { id: before.residenceId },
-          select: { totalRooms: true },
         }),
         tx.roomType.findUnique({
           where: { id: before.roomTypeId },
-          select: { totalRooms: true },
         }),
         targetRoomId ? tx.residenceRoom.findUnique({ where: { id: targetRoomId } }) : null,
       ]);
@@ -365,6 +400,12 @@ export class ApplicationsService {
       }
       if (!currentRoomType) {
         throw new NotFoundException('Selected room type was not found');
+      }
+      if (dto.status === ApplicationStatus.APPROVED && (before.status !== ApplicationStatus.APPROVED || roomChanged)) {
+        assertResidenceEligibility(currentResidence, before.gender ?? '', before.institutionName ?? '');
+        if (currentRoomType.residenceId !== before.residenceId && (currentResidence.slug || currentRoomType.residenceId)) {
+          throw new ConflictException('The application category does not belong to this residence');
+        }
       }
       if (dto.status === ApplicationStatus.APPROVED && !targetRoomId) {
         throw new ConflictException('Assign an available residence room before approving this application');
@@ -375,6 +416,9 @@ export class ApplicationsService {
         }
         if (targetRoom.genderAllocation !== before.gender) {
           throw new ConflictException(`Assigned room is allocated to ${targetRoom.genderAllocation.toLowerCase()} students`);
+        }
+        if (targetRoom.roomTypeName !== (currentRoomType.displayName ?? currentRoomType.roomTypeName)) {
+          throw new ConflictException('Assigned room does not match the application category');
         }
       }
 
@@ -496,6 +540,7 @@ export class ApplicationsService {
       pendingApplications,
       maintenanceRequests,
       openMaintenanceRequests,
+      occupiedByResidence,
     ] = await Promise.all([
       this.prisma.userRole.count({ where: { role: { name: RoleName.STUDENT } } }),
       this.prisma.application.count(),
@@ -510,12 +555,19 @@ export class ApplicationsService {
           residenceType: true,
           totalRooms: true,
           availableRooms: true,
+          slug: true,
+          active: true,
+          advertisedCapacity: true,
+          allowedGenders: true,
+          maleCapacity: true,
+          femaleCapacity: true,
         },
       }),
       this.prisma.document.count(),
       this.prisma.application.count({ where: { status: { in: [ApplicationStatus.SUBMITTED, ApplicationStatus.UNDER_REVIEW] } } }),
       this.prisma.maintenanceRequest.count(),
       this.prisma.maintenanceRequest.count({ where: { status: { in: [MaintenanceStatus.OPEN, MaintenanceStatus.ACKNOWLEDGED, MaintenanceStatus.IN_PROGRESS] } } }),
+      this.prisma.residenceRoom.groupBy({ by: ['residenceId'], where: { status: 'OCCUPIED' }, _count: { _all: true } }),
     ]);
 
     return {
@@ -526,11 +578,11 @@ export class ApplicationsService {
       documents,
       maintenanceRequests,
       openMaintenanceRequests,
-      totalRooms: residences.reduce((sum, residence) => sum + residence.totalRooms, 0),
-      availableRooms: residences.reduce((sum, residence) => sum + residence.availableRooms, 0),
+      totalRooms: residences.filter(residence => residence.active).reduce((sum, residence) => sum + residence.totalRooms, 0),
+      availableRooms: residences.filter(residence => residence.active).reduce((sum, residence) => sum + residence.availableRooms, 0),
       residences: residences.map((residence) => ({
         ...residence,
-        occupiedRooms: residence.totalRooms - residence.availableRooms,
+        occupiedRooms: occupiedByResidence.find(group => group.residenceId === residence.id)?._count._all ?? 0,
       })),
       statuses: statuses.reduce<Record<string, number>>((acc, item) => {
         acc[item.status] = item._count.status;
@@ -551,7 +603,7 @@ export class ApplicationsService {
   }
 
   private referenceCode() {
-    return `JSA-${Date.now()}-${randomBytes(3).toString('hex').toUpperCase()}`;
+    return `RES-${Date.now()}-${randomBytes(3).toString('hex').toUpperCase()}`;
   }
 
   private async expireApprovalOffers() {
@@ -574,8 +626,12 @@ export class ApplicationsService {
       take: 50,
     });
 
-    for (const application of expired) {
+    for (const candidate of expired) {
       await this.prisma.$transaction(async (tx) => {
+        await tx.$queryRaw(Prisma.sql`SELECT "id" FROM "Residence" WHERE "id" = ${candidate.residenceId}::uuid FOR UPDATE`);
+        const application = await tx.application.findUnique({ where: { id: candidate.id }, include: { residence: true, roomType: true } });
+        if (!application || application.status !== ApplicationStatus.APPROVED || application.acceptedAt ||
+            !application.approvalExpiresAt || application.approvalExpiresAt >= now) return;
         const result = await tx.application.updateMany({
           where: {
             id: application.id,

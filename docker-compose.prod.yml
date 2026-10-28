@@ -1,6 +1,9 @@
 services:
   api:
     image: ${API_IMAGE}
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
     restart: unless-stopped
     env_file:
       - ${ENV_FILE:-.env.production}
@@ -9,8 +12,8 @@ services:
       API_PORT: 4000
       STORAGE_DRIVER: s3
       S3_USE_IAM_ROLE: ${S3_USE_IAM_ROLE:-false}
-    ports:
-      - "4000:4000"
+    expose:
+      - "4000"
     healthcheck:
       test: ["CMD", "node", "-e", "fetch('http://localhost:4000/health/ready').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
       interval: 15s
@@ -20,6 +23,13 @@ services:
 
   web:
     image: ${WEB_IMAGE}
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL}
+        NEXT_PUBLIC_BRAND_LOGO_URL: ${NEXT_PUBLIC_BRAND_LOGO_URL:-/logo.svg}
+        NEXT_PUBLIC_AUTH_HERO_IMAGE_URL: ${NEXT_PUBLIC_AUTH_HERO_IMAGE_URL}
     restart: unless-stopped
     environment:
       NODE_ENV: production
@@ -28,8 +38,8 @@ services:
     depends_on:
       api:
         condition: service_healthy
-    ports:
-      - "3000:3000"
+    expose:
+      - "3000"
     healthcheck:
       test: ["CMD", "node", "-e", "fetch('http://localhost:3000/login').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
       interval: 15s
@@ -37,8 +47,8 @@ services:
       retries: 5
       start_period: 30s
 
-  nginx:
-    image: nginx:1.27-alpine
+  gateway:
+    image: caddy:2-alpine
     restart: unless-stopped
     depends_on:
       api:
@@ -46,6 +56,16 @@ services:
       web:
         condition: service_healthy
     ports:
-      - "8080:80"
+      - "80:80"
+      - "443:443"
+    environment:
+      PORTAL_HOST: ${PORTAL_HOST:?Set PORTAL_HOST to the real portal hostname}
+      API_HOST: ${API_HOST:?Set API_HOST to the real API hostname}
     volumes:
-      - ./infra/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./infra/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+
+volumes:
+  caddy_data:
+  caddy_config:

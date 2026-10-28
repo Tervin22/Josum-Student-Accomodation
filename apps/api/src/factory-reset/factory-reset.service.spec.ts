@@ -76,5 +76,8 @@ describe('FactoryResetService', () => {
     });
     expect(result.deleted.students).toBe(4);
     expect(result.deleted.staffAccounts).toBe(3);
+    expect(tx.roomType.deleteMany).not.toHaveBeenCalled();
+    expect(tx.roomType.upsert).not.toHaveBeenCalled();
+    expect(tx.residenceRoom.updateMany).toHaveBeenCalledWith({ data: { status: 'AVAILABLE' } });
   });
 });

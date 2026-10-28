@@ -57,6 +57,19 @@ function createService(candidates = [application()]) {
 }
 
 describe('PaymentRemindersService', () => {
+  it('does not use the historical Josum tariff for a new residence with no confirmed rent', async () => {
+    const { service, mail, prisma } = createService([application({ residence: { name: 'Res Roma', slug: 'roma', monthlyRentCents: null } })]);
+    expect(await service.sendDueReminders(new Date('2026-08-28T08:00:00.000Z'))).toMatchObject({ sent: 0, skipped: 1 });
+    expect(mail.sendTemplate).not.toHaveBeenCalled();
+    expect(prisma.paymentReminder.create).not.toHaveBeenCalled();
+  });
+
+  it('uses the configured residence tariff in the stored reminder and template', async () => {
+    const { service, mail, prisma } = createService([application({ residence: { name: 'Res Roma', slug: 'roma', monthlyRentCents: 420000 } })]);
+    await service.sendDueReminders(new Date('2026-08-28T08:00:00.000Z'));
+    expect(prisma.paymentReminder.create).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ amountCents: 420000 }) }));
+    expect(mail.sendTemplate).toHaveBeenCalledWith(expect.any(String), expect.any(String), expect.objectContaining({ residenceName: 'Res Roma', amount: expect.stringContaining('4') }));
+  });
   it('sends reminders only to due self-paying accepted residents', async () => {
     const { service, mail, prisma } = createService([
       application(),

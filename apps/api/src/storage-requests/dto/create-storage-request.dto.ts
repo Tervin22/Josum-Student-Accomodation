@@ -1,8 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Transform, Type } from 'class-transformer';
-import { IsBoolean, IsIn, IsInt, IsNotEmpty, IsOptional, IsString, Max, MaxLength, Min } from 'class-validator';
-
-export const storageSiteValues = ['JOSUM_ONE', 'JOSUM_TWO'] as const;
+import { IsBoolean, IsInt, IsNotEmpty, IsOptional, IsString, Max, MaxLength, Min } from 'class-validator';
 
 export class CreateStorageRequestDto {
   @ApiPropertyOptional()
@@ -36,9 +34,11 @@ export class CreateStorageRequestDto {
   @Max(200)
   numberOfItemsStored!: number;
 
-  @ApiProperty({ enum: storageSiteValues })
-  @IsIn(storageSiteValues)
-  storageSite!: (typeof storageSiteValues)[number];
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  @MaxLength(160)
+  storageSite?: string;
 
   @ApiProperty()
   @Transform(({ value }) => value === true || value === 'true' || value === 'on' || value === '1')

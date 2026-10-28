@@ -1,10 +1,18 @@
-node_modules
+# Only application sources and workspace manifests enter container builds.
+**
+!package.json
+!pnpm-lock.yaml
+!pnpm-workspace.yaml
+!apps/
+!apps/**
 apps/**/node_modules
 apps/**/.next
+apps/**/.next-dev
 apps/**/dist
-.git
-.env
-.env.local
-.docker-temp
-uploads
-*.log
+apps/**/coverage
+apps/**/.env
+apps/**/.env.*
+!apps/**/.env.example
+!apps/**/.env.local.example
+apps/**/*.tsbuildinfo
+apps/**/uploads

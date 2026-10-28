@@ -353,6 +353,8 @@ export class AuthService {
   }
 
   async bootstrapAdmin(dto: BootstrapAdminDto, context?: SecurityContext) {
+    const enabled = this.config.get<boolean | string>('ENABLE_ADMIN_BOOTSTRAP');
+    if (enabled === false || enabled === 'false') throw new ForbiddenException('Administrator bootstrap is disabled');
     const configuredToken = this.config.get<string>('INSTALLATION_ADMIN_TOKEN');
     if (!configuredToken || dto.bootstrapToken !== configuredToken) {
       throw new UnauthorizedException('Invalid installation token');
@@ -373,6 +375,10 @@ export class AuthService {
 
     const passwordHash = await this.hashSecret(dto.password);
     const user = await this.prisma.$transaction(async (tx) => {
+      await tx.$queryRaw(Prisma.sql`SELECT 1 AS locked FROM pg_advisory_xact_lock(hashtextextended('initial-administrator', 0))`);
+      if (await tx.userRole.count({ where: { role: { name: RoleName.ADMINISTRATOR } } })) {
+        throw new ForbiddenException('Administrator bootstrap is already complete');
+      }
       const role = await tx.role.upsert({
         where: { name: RoleName.ADMINISTRATOR },
         update: {},

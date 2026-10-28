@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Patch, Query, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Param, Patch, Post, Query, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { Roles } from '../common/decorators/roles.decorator';
@@ -8,6 +8,7 @@ import { ROOM_MANAGEMENT_ROLES, ROOM_VIEW_ROLES } from '../common/roles/role-gro
 import { ListResidenceRoomsDto } from './dto/list-residence-rooms.dto';
 import { UpdateResidenceRoomDto } from './dto/update-residence-room.dto';
 import { ResidenceRoomsService } from './residence-rooms.service';
+import { CreateResidenceRoomDto } from './dto/create-residence-room.dto';
 
 @ApiTags('residence-rooms')
 @ApiBearerAuth()
@@ -15,6 +16,12 @@ import { ResidenceRoomsService } from './residence-rooms.service';
 @Controller('residence-rooms')
 export class ResidenceRoomsController {
   constructor(private readonly rooms: ResidenceRoomsService) {}
+
+  @Post()
+  @Roles(...ROOM_MANAGEMENT_ROLES)
+  create(@CurrentUser() user: { sub: string }, @Body() dto: CreateResidenceRoomDto) {
+    return this.rooms.create(user.sub, dto);
+  }
 
   @Get()
   @Roles(...ROOM_VIEW_ROLES)

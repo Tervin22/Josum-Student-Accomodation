@@ -36,7 +36,8 @@ const activeStudent = {
 
 function createService() {
   const tx = {
-    application: { update: jest.fn().mockResolvedValue({}) },
+    $queryRaw: jest.fn().mockResolvedValue([]),
+    application: { update: jest.fn().mockResolvedValue({}), findUnique: jest.fn().mockResolvedValue(activeStudent.applications[0]) },
     residenceRoom: { updateMany: jest.fn().mockResolvedValue({ count: 1 }) },
     residence: { updateMany: jest.fn().mockResolvedValue({ count: 1 }) },
     roomType: { updateMany: jest.fn().mockResolvedValue({ count: 1 }) },
@@ -95,6 +96,13 @@ function createService() {
 }
 
 describe('UsersService stay termination', () => {
+  it('does not release a stay that another request has already ended', async () => {
+    const { service, tx } = createService();
+    tx.application.findUnique.mockResolvedValue({ ...activeStudent.applications[0], status: ApplicationStatus.MOVED_OUT });
+    await expect(service.terminateStudent('admin-1', 'student-1', { reason: 'Moving out' })).rejects.toThrow('already ended');
+    expect(tx.residenceRoom.updateMany).not.toHaveBeenCalled();
+    expect(tx.residence.updateMany).not.toHaveBeenCalled();
+  });
   it('filters blocked students and hides block details from non-admin student record viewers', async () => {
     const { service, prisma } = createService();
     prisma.user.findMany.mockResolvedValue([

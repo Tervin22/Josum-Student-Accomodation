@@ -222,6 +222,7 @@ async function downloadAuthorized(path: string, filename: string, fallbackMessag
 
 export function compactForm(form: FormData) {
   const numericFields = new Set([
+    'roomNumber',
     'monthlyRate',
     'depositAmount',
     'totalRooms',
@@ -237,6 +238,7 @@ export function compactForm(form: FormData) {
     'isNwuStudent',
     'returningStudent',
     'hasMedicalConditions',
+    'hasChronicMedication',
     'maintenanceRequired',
     'studentAcknowledgement',
     'inspectorConfirmed',

@@ -1,0 +1,38 @@
+name: Release Quality Checks
+on:
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:18-alpine
+        env:
+          POSTGRES_DB: residence_ci
+          POSTGRES_USER: ci
+          POSTGRES_PASSWORD: ephemeral-ci-only
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U ci -d residence_ci"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      DATABASE_URL: postgresql://ci:ephemeral-ci-only@localhost:5432/residence_ci
+      NEXT_PUBLIC_API_URL: https://api.ci.example.invalid
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: corepack enable
+      - run: corepack pnpm install --frozen-lockfile
+      - run: corepack pnpm --filter @josum/api prisma:generate
+      - run: corepack pnpm lint
+      - run: corepack pnpm test --runInBand
+      - run: corepack pnpm build
+      - run: corepack pnpm --filter @josum/api prisma:migrate:deploy
+      - run: corepack pnpm --filter @josum/api prisma:seed
+      - run: node scripts/verify-starter-database.mjs
+      - run: node scripts/test-residence-flows.mjs

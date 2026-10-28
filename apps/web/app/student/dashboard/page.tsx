@@ -3,7 +3,7 @@
 import NextImage from 'next/image';
 import { FormEvent, useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
 import { useRouter } from 'next/navigation';
-import { AlertTriangle, Archive, Building2, Check, Clock3, Download, FileUp, Home, MapPin, PenLine, RefreshCw, Save, Send, Trash2, UserPlus, UserRound, Wrench, X, type LucideIcon } from 'lucide-react';
+import { Archive, Building2, Check, Clock3, Download, FileUp, Home, MapPin, PenLine, RefreshCw, Save, Send, Trash2, UserPlus, UserRound, Wrench, X, type LucideIcon } from 'lucide-react';
 import { AppShell, EmptyState, StatTile } from '@/components/AppShell';
 import { MaintenanceSlaPanel } from '@/components/MaintenanceSlaPanel';
 import { StatusBadge } from '@/components/StatusBadge';
@@ -50,11 +50,6 @@ const documentTypeLabels: Partial<Record<DocumentTypeValue, string>> = {
   MEDICAL_AID_CERTIFICATE: 'Medical Aid Certificate',
   OTHER: 'Other',
 };
-const storageSiteOptions = [
-  ['JOSUM_ONE', 'Josum One'],
-  ['JOSUM_TWO', 'Josum Two'],
-] as const;
-
 export default function StudentDashboardPage() {
   const router = useRouter();
   const toast = useToast();
@@ -160,13 +155,14 @@ export default function StudentDashboardPage() {
 
   useEffect(() => {
     const draft = readApplicationDraft();
-    setApplicationDraft(draft);
     setApplicationDraftReady(true);
     if (!draft) return;
 
     const queryResidenceId = new URLSearchParams(window.location.search).get('residenceId');
+    const changedResidence = queryResidenceId && queryResidenceId !== draft.residenceId;
+    setApplicationDraft(changedResidence ? { ...draft, residenceId: queryResidenceId, roomTypeId: '', institutionName: '', roomId: '', gender: '' } : draft);
     if (draft.residenceId && !queryResidenceId) setSelectedResidenceId(draft.residenceId);
-    if (draft.gender) setApplicationGender(draft.gender);
+    if (draft.gender && !changedResidence) setApplicationGender(draft.gender);
     if (draft.applicantCategory) setApplicantCategory(draft.applicantCategory);
     if (draft.returningStudent) setReturningStudent(draft.returningStudent === 'true');
     if (draft.signatureDataUrl) setSignatureDataUrl(draft.signatureDataUrl);
@@ -187,10 +183,15 @@ export default function StudentDashboardPage() {
     ? `${storageEligibleApplication.applicantFirstName} ${storageEligibleApplication.applicantLastName}`.trim()
     : `${me?.firstName ?? ''} ${me?.lastName ?? ''}`.trim();
   const storageDefaultRoom = storageEligibleApplication?.room?.roomNumber?.toString() ?? storageEligibleApplication?.room?.name ?? '';
-  const storageDefaultSite = storageSiteValue(storageEligibleApplication?.residence?.name);
+  const storageDefaultSite = storageEligibleApplication?.residence?.name ?? '';
   const visitorEligibleApplication = storageEligibleApplication;
   const availableRooms = residences.reduce((sum, residence) => sum + residence.availableRooms, 0);
   const selectedResidence = residences.find((residence) => residence.id === selectedResidenceId);
+  const residenceRoomTypes = roomTypes.filter(type => type.residenceId === selectedResidenceId);
+  useEffect(() => {
+    const genders = selectedResidence?.allowedGenders;
+    if (genders?.length && !genders.includes(applicationGender)) setApplicationGender(genders.length === 1 ? genders[0] : '');
+  }, [selectedResidenceId, selectedResidence?.allowedGenders, applicationGender]);
   const hasProfilePhoto = Boolean(me?.studentProfile?.hasProfileImage || me?.studentProfile?.profileImageUploadedAt);
   const availableResidenceRooms = residenceRooms.filter(
     (room) =>
@@ -562,8 +563,6 @@ export default function StudentDashboardPage() {
               Upload your student profile photo from the profile tab before submitting an accommodation application.
             </section>
           )}
-          <ReturningStudentDisclaimer />
-
           <div className="grid gap-6 xl:grid-cols-[minmax(0,360px)_minmax(0,1fr)]">
             <section className="grid gap-4 self-start">
               <div className="rounded-lg border border-line bg-white p-3 shadow-sm sm:p-4">
@@ -581,12 +580,12 @@ export default function StudentDashboardPage() {
                       </p>
                     </div>
                     <span className="w-fit rounded-full border border-brand/20 bg-teal-50 px-3 py-1 text-sm font-semibold text-brand">
-                      {residence.availableRooms} available
+                      {residence.totalRooms ? `${residence.availableRooms} available` : 'Room setup pending'}
                     </span>
                   </div>
                   <div className="mt-4 grid gap-3 text-sm sm:grid-cols-2">
                     <p><span className="text-slate-500">Residence type</span><br />{residence.residenceType}</p>
-                    <p><span className="text-slate-500">Rooms</span><br />{residence.availableRooms} of {residence.totalRooms} available</p>
+                    <p><span className="text-slate-500">Published capacity</span><br />{residence.advertisedCapacity ?? 'Not published'}</p>
                   </div>
                   <button
                     type="button"
@@ -601,7 +600,7 @@ export default function StudentDashboardPage() {
 
             <form ref={applicationFormRef} onSubmit={submitApplication} className="rounded-lg border border-line bg-white p-3 shadow-sm sm:p-4">
               <h2 className="font-semibold text-ink">Accommodation application</h2>
-              <p className="mt-1 text-sm text-slate-500">Complete the booking details below after reviewing the reservation process and rates.</p>
+              <p className="mt-1 text-sm text-slate-500">Application for {selectedResidence?.name ?? 'your selected residence'}</p>
               {applicationDraft && (
                 <div className="mt-4 flex flex-col gap-3 rounded-lg border border-blue-200 bg-blue-50 p-3 text-sm text-blue-950 sm:flex-row sm:items-center sm:justify-between">
                   <span>Saved application draft restored on this device.</span>
@@ -640,11 +639,9 @@ export default function StudentDashboardPage() {
                   <h3 className="text-sm font-semibold uppercase text-slate-500">Booking details</h3>
                   <div className="grid gap-4 md:grid-cols-2">
                     <label className="grid gap-1 text-sm font-medium text-ink">
-                      NWU Vaal Triangle student
-                      <select name="isNwuStudent" required defaultValue="true" className="focus-ring h-11 w-full rounded-lg border border-line bg-white px-3 py-2">
-                        <option value="true">Yes</option>
-                        <option value="false">No</option>
-                      </select>
+                      Application location
+                      <input readOnly value={selectedResidence?.name ?? 'Choose a residence'} className="h-11 w-full rounded-lg border border-line bg-slate-50 px-3 text-sm" />
+                      <input name="isNwuStudent" type="hidden" value="false" />
                     </label>
                     <label className="grid gap-1 text-sm font-medium text-ink">
                       Year of study
@@ -705,8 +702,8 @@ export default function StudentDashboardPage() {
                       >
                         <option value="">Select residence</option>
                         {residences.map((residence) => (
-                          <option key={residence.id} value={residence.id} disabled={residence.availableRooms === 0}>
-                            {residence.name} - {residence.availableRooms} rooms available
+                          <option key={residence.id} value={residence.id} disabled={residence.acceptingApplications === false}>
+                            {residence.name}
                           </option>
                         ))}
                       </select>
@@ -716,7 +713,7 @@ export default function StudentDashboardPage() {
                         Preferred returning-student room
                         <select
                           name="roomId"
-                          required
+                          key={`preferred-${selectedResidenceId}-${applicationGender}`}
                           disabled={!selectedResidenceId}
                           className="focus-ring h-11 w-full rounded-lg border border-line bg-white px-3 py-2 disabled:bg-slate-100"
                         >
@@ -728,7 +725,7 @@ export default function StudentDashboardPage() {
                           ))}
                         </select>
                         <span className="text-xs font-normal text-slate-500">
-                          Josum 1 rooms 1-50 are allocated to female students and rooms 51-78 to male students.
+                          Room preferences are subject to eligibility, management review and confirmed availability.
                         </span>
                       </label>
                     )}
@@ -736,21 +733,22 @@ export default function StudentDashboardPage() {
                       Room category
                       <select
                         name="roomTypeId"
+                        key={`category-${selectedResidenceId}`}
                         required
-                        disabled={!roomTypes.length}
-                        defaultValue={roomTypes[0]?.id ?? ''}
+                        disabled={!residenceRoomTypes.length}
+                        defaultValue={residenceRoomTypes[0]?.id ?? ''}
                         className="focus-ring h-11 w-full rounded-lg border border-line bg-white px-3 py-2 text-ink disabled:cursor-not-allowed disabled:bg-slate-100"
                       >
-                        {!roomTypes.length && <option value="">No rooms available yet</option>}
-                        {roomTypes.map((roomType) => (
+                        {!residenceRoomTypes.length && <option value="">Select residence first</option>}
+                        {residenceRoomTypes.map((roomType) => (
                           <option key={roomType.id} value={roomType.id}>
-                            {roomType.roomTypeName}
+                            {roomType.displayName ?? roomType.roomTypeName}
                           </option>
                         ))}
                       </select>
-                      {!roomTypes.length && (
+                      {!residenceRoomTypes.length && (
                         <span className="text-xs font-normal text-slate-500">
-                          No numbered rooms are currently available.
+                          Select a residence to see its application category.
                         </span>
                       )}
                     </label>
@@ -807,13 +805,15 @@ export default function StudentDashboardPage() {
                       className="focus-ring h-11 w-full rounded-lg border border-line bg-white px-3 py-2"
                     >
                       <option value="">Select gender</option>
-                      <option value="Female">Female</option>
-                      <option value="Male">Male</option>
+                      {(selectedResidence?.allowedGenders ?? ['Female', 'Male']).map(gender => <option key={gender} value={gender}>{gender}</option>)}
                     </select>
                   </label>
                   <label className="grid gap-1 text-sm font-medium text-ink">
                     Name of institution
-                    <input name="institutionName" required defaultValue={String(me?.studentProfile?.institution ?? '')} className="focus-ring h-11 w-full rounded-lg border border-line px-3 py-2" />
+                    <select key={`institution-${selectedResidenceId}`} name="institutionName" required disabled={!selectedResidence} defaultValue="" className="focus-ring h-11 w-full rounded-lg border border-line bg-white px-3 py-2">
+                      <option value="">Select eligible institution</option>
+                      {selectedResidence?.allowedInstitutions?.map(institution => <option key={institution} value={institution}>{institution}</option>)}
+                    </select>
                   </label>
                   <label className="grid gap-1 text-sm font-medium text-ink">
                     Name of course
@@ -840,7 +840,6 @@ export default function StudentDashboardPage() {
                       <option value="NSFAS">NSFAS</option>
                       <option value="Private Bursary">Private bursary</option>
                       <option value="Self Funding">Self funding</option>
-                      <option value="Family Sponsor">Family sponsor</option>
                       <option value="Other">Other</option>
                     </select>
                   </label>
@@ -857,6 +856,10 @@ export default function StudentDashboardPage() {
                   <label className="grid gap-1 text-sm font-medium text-ink">
                     Full names and surname
                     <input name="guarantorFullName" required className="focus-ring h-11 w-full rounded-lg border border-line px-3 py-2" />
+                  </label>
+                  <label className="grid gap-1 text-sm font-medium text-ink">
+                    Parent or guardian relationship
+                    <input name="guardianRelationship" required maxLength={80} className="focus-ring h-11 w-full rounded-lg border border-line px-3 py-2" />
                   </label>
                   <label className="grid gap-1 text-sm font-medium text-ink">
                     ID / Passport no
@@ -941,6 +944,16 @@ export default function StudentDashboardPage() {
                   <textarea name="medicalDetails" rows={3} className="focus-ring w-full rounded-lg border border-line px-3 py-2" />
                 </label>
                 <label className="grid gap-1 text-sm font-medium text-ink">
+                  Do you take chronic medication the residence should know about?
+                  <select name="hasChronicMedication" defaultValue="false" className="focus-ring h-11 w-full rounded-lg border border-line bg-white px-3">
+                    <option value="false">No</option><option value="true">Yes</option>
+                  </select>
+                </label>
+                <label className="grid gap-1 text-sm font-medium text-ink">
+                  If yes, medication details
+                  <textarea name="chronicMedicationDetails" maxLength={2000} rows={3} className="focus-ring w-full rounded-lg border border-line px-3 py-2" />
+                </label>
+                <label className="grid gap-1 text-sm font-medium text-ink">
                   Any missing information?
                   <textarea name="additionalInformation" rows={3} className="focus-ring w-full rounded-lg border border-line px-3 py-2" />
                 </label>
@@ -950,7 +963,7 @@ export default function StudentDashboardPage() {
                 </label>
                 <label className="flex items-start gap-3 rounded-lg border border-line p-3 text-sm text-slate-700">
                   <input name="termsAccepted" type="checkbox" required className="mt-1 h-4 w-4 rounded border-line text-brand" />
-                  <span>I have read and agree to the Josum Student Accommodation application terms, reservation process, payment rules, cancellation penalties, and house rules.</span>
+                  <span>I consent to management reviewing this application for {selectedResidence?.name ?? 'the selected residence'}. An application is not a room reservation or signed lease.</span>
                 </label>
               </section>
 
@@ -958,14 +971,12 @@ export default function StudentDashboardPage() {
                 <h3 className="text-sm font-semibold uppercase text-slate-500">Declaration and electronic signature</h3>
                 <div className="grid gap-3 text-sm leading-6 text-slate-700">
                   <p>
-                    I declare that I have read and agreed to all the terms in this Accommodation Application Form. By signing electronically, I understand and agree fully:
+                    I confirm that the information in this application and the supporting documents is accurate to the best of my knowledge.
                   </p>
                   <ol className="grid list-decimal gap-2 pl-5">
-                    <li>This application is subject to room availability on a first come first serve basis. Only available rooms will be offered to students.</li>
-                    <li>Students may be moved to other rooms if the unit is not fully occupied for cost effectiveness, and any room price difference must be paid by the student.</li>
-                    <li>The minimum term of the Student Accommodation Agreement is 10 months or a period ending November each year.</li>
-                    <li>Cancellation may result in one month rental, application fee and administration fee being charged before signing, or 25% of the remainder of the contract during the year.</li>
-                    <li>The deposit is refundable after the tenancy period if the room is returned in the same condition as occupation started.</li>
+                    <li>This application is for {selectedResidence?.name ?? 'the selected residence'} and is subject to management review, eligibility and confirmed room availability.</li>
+                    <li>A preferred room is not guaranteed. A room offer must be accepted before the expiry date shown in the portal.</li>
+                    <li>Rental amounts, deposits, payment instructions and any lease conditions must be confirmed separately with the selected residence's management.</li>
                   </ol>
                 </div>
                 <div className="grid gap-4 md:grid-cols-2">
@@ -1078,8 +1089,8 @@ export default function StudentDashboardPage() {
               <label className="grid gap-1 text-sm font-medium text-ink">
                 Room type
                 <select name="roomTypeId" className="focus-ring h-11 w-full rounded-lg border border-line bg-white px-3 py-2 text-ink">
-                  <option value="">Not room-type-specific</option>
-                  {roomTypes.map((roomType) => (
+                  <option value="">My allocated residence</option>
+                  {roomTypes.filter(type => type.id === storageEligibleApplication?.roomType?.id).map((roomType) => (
                     <option key={roomType.id} value={roomType.id}>{roomType.roomTypeName}</option>
                   ))}
                 </select>
@@ -1295,16 +1306,7 @@ export default function StudentDashboardPage() {
                 </label>
                 <label className="grid gap-1 text-sm font-medium text-ink">
                   Storage site
-                  <select
-                    name="storageSite"
-                    required
-                    defaultValue={storageDefaultSite}
-                    disabled={!storageEligibleApplication || storageSubmitting}
-                    className="focus-ring h-10 rounded-lg border border-line bg-white px-3 text-sm disabled:bg-slate-100"
-                  >
-                    <option value="">Select</option>
-                    {storageSiteOptions.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
-                  </select>
+                  <input name="storageSite" readOnly value={storageDefaultSite} className="h-10 rounded-lg border border-line bg-slate-50 px-3 text-sm" />
                 </label>
                 <label className="grid gap-1 text-sm font-medium text-ink">
                   Number of items stored
@@ -1350,7 +1352,7 @@ export default function StudentDashboardPage() {
                   className="mt-1 h-4 w-4 rounded border-amber-300 text-brand"
                 />
                 <span>
-                  Storage services are only offered to students residing at Josum for the academic year. Retrieving belongings before moving out may carry a monthly fee of R 4 100 for the storage period.
+                  Storage arrangements and any charges must be confirmed with the management of your residence before belongings are accepted.
                 </span>
               </label>
               <label className="grid gap-1 text-sm font-medium text-ink">
@@ -1603,26 +1605,6 @@ export default function StudentDashboardPage() {
         />
       )}
     </AppShell>
-  );
-}
-
-function ReturningStudentDisclaimer() {
-  return (
-    <section className="rounded-lg border border-amber-300 bg-amber-50 p-4 shadow-sm sm:p-5">
-      <div className="flex items-start gap-3">
-        <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-amber-100 text-amber-700">
-          <AlertTriangle className="h-5 w-5" aria-hidden="true" />
-        </span>
-        <div>
-          <p className="text-xs font-semibold uppercase text-amber-800">Disclaimer</p>
-          <h2 className="mt-1 text-base font-bold uppercase text-ink">For returning students only</h2>
-          <p className="mt-2 max-w-4xl text-sm font-medium leading-6 text-slate-800">
-            Please choose a room below. After choosing, come and sign a storage form for that room.
-            Failure to do so will result in you forfeiting rights of ownership to that particular room.
-          </p>
-        </div>
-      </div>
-    </section>
   );
 }
 
@@ -1903,13 +1885,6 @@ function formatEnum(value: string) {
     .split('_')
     .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
     .join(' ');
-}
-
-function storageSiteValue(name?: string | null) {
-  const normalized = name?.toLowerCase() ?? '';
-  if (normalized.includes('two') || normalized.includes('2')) return 'JOSUM_TWO';
-  if (normalized.includes('one') || normalized.includes('1')) return 'JOSUM_ONE';
-  return '';
 }
 
 function collectApplicationDraft(form: HTMLFormElement): ApplicationDraft {

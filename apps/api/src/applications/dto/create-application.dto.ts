@@ -19,7 +19,6 @@ const signatureDataUrlPattern = /^data:image\/(png|jpeg);base64,[A-Za-z0-9+/=]+$
 export class CreateApplicationDto {
   @ApiProperty()
   @IsBoolean()
-  @Equals(true, { message: 'Only NWU Vaal Triangle students may continue with this application' })
   isNwuStudent: boolean;
 
   @ApiProperty()
@@ -211,6 +210,15 @@ export class CreateApplicationDto {
   @ApiProperty()
   @IsBoolean()
   hasMedicalConditions: boolean;
+
+  @ApiPropertyOptional() @IsOptional() @IsBoolean()
+  hasChronicMedication?: boolean;
+
+  @ApiPropertyOptional() @IsOptional() @IsString() @MaxLength(2000)
+  chronicMedicationDetails?: string;
+
+  @ApiPropertyOptional() @IsOptional() @IsString() @MaxLength(80)
+  guardianRelationship?: string;
 
   @ApiPropertyOptional()
   @IsOptional()

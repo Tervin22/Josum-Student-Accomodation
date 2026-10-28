@@ -274,6 +274,12 @@ export class UsersService {
     const now = new Date();
     const identifiers = this.registrationBlockIdentifiers(student, application);
     await this.prisma.$transaction(async (tx) => {
+      await tx.$queryRaw(Prisma.sql`SELECT id FROM "Residence" WHERE id = ${application.residenceId}::uuid FOR UPDATE`);
+      const current = await tx.application.findUnique({ where: { id: application.id } });
+      if (!current || current.status !== ApplicationStatus.APPROVED || !current.acceptedAt ||
+          current.stayStatus !== StayStatus.ACTIVE || current.terminatedAt || current.roomId !== application.roomId) {
+        throw new ConflictException('This stay has changed or has already ended. Refresh the student record.');
+      }
       await tx.application.update({
         where: { id: application.id },
         data: {
@@ -294,10 +300,11 @@ export class UsersService {
       });
 
       if (application.roomId) {
-        await tx.residenceRoom.updateMany({
+        const released = await tx.residenceRoom.updateMany({
           where: { id: application.roomId, status: 'OCCUPIED' },
           data: { status: 'AVAILABLE' },
         });
+        if (released.count !== 1) throw new ConflictException('The allocated room needs reconciliation before termination');
       }
       await tx.residence.updateMany({
         where: { id: application.residenceId, availableRooms: { lt: application.residence.totalRooms } },

@@ -36,6 +36,7 @@ export function validateEnvironment(config: Record<string, unknown>) {
     LOCAL_STORAGE_PATH: String(config.LOCAL_STORAGE_PATH ?? 'uploads'),
     SMTP_PORT: Number(config.SMTP_PORT ?? 587),
     SMTP_SECURE: String(config.SMTP_SECURE ?? 'false') === 'true',
+    ENABLE_ADMIN_BOOTSTRAP: String(config.ENABLE_ADMIN_BOOTSTRAP ?? (nodeEnv === 'production' ? 'false' : 'true')) === 'true',
     S3_USE_IAM_ROLE: String(config.S3_USE_IAM_ROLE ?? 'false') === 'true',
     S3_FORCE_PATH_STYLE: String(config.S3_FORCE_PATH_STYLE ?? 'false') === 'true',
   };
@@ -45,12 +46,12 @@ function validateProductionEnvironment(config: Record<string, unknown>) {
   const secrets = [
     'JWT_ACCESS_SECRET',
     'JWT_REFRESH_SECRET',
-    'INSTALLATION_ADMIN_TOKEN',
     'FACTORY_RESET_RECOVERY_KEY',
     'STAFF_MANAGER_REGISTRATION_KEY',
     'STAFF_SECURITY_REGISTRATION_KEY',
     'STAFF_TECHNICIAN_REGISTRATION_KEY',
   ];
+  if (String(config.ENABLE_ADMIN_BOOTSTRAP ?? 'false') === 'true') secrets.push('INSTALLATION_ADMIN_TOKEN');
   const invalidSecrets = secrets.filter((key) => {
     const value = String(config[key] ?? '');
     return value.length < 32 || /replace|change-me|example/i.test(value);
@@ -60,6 +61,9 @@ function validateProductionEnvironment(config: Record<string, unknown>) {
   }
   if (config.JWT_ACCESS_SECRET === config.JWT_REFRESH_SECRET) {
     throw new Error('JWT_ACCESS_SECRET and JWT_REFRESH_SECRET must be different');
+  }
+  if (new Set(secrets.map(key => config[key])).size !== secrets.length) {
+    throw new Error('Every production registration, JWT and recovery secret must be different');
   }
 
   const publicAppUrl = String(config.PUBLIC_APP_URL);
@@ -73,6 +77,9 @@ function validateProductionEnvironment(config: Record<string, unknown>) {
 
   if (!config.SMTP_HOST || !config.SMTP_FROM) {
     throw new Error('SMTP_HOST and SMTP_FROM are required in production');
+  }
+  if (Number(config.SMTP_PORT ?? 587) === 587 && String(config.SMTP_SECURE ?? 'false') === 'true') {
+    throw new Error('SMTP port 587 uses STARTTLS; set SMTP_SECURE=false or use provider-supported implicit TLS on port 465');
   }
 
   const storageDriver = String(config.STORAGE_DRIVER ?? 'local');

@@ -244,17 +244,36 @@ model RoomType {
   roomTypeName        String               @unique @map("room_type_name")
   totalRooms          Int                  @default(0) @map("total_rooms")
   availableRooms      Int                  @default(0) @map("available_rooms")
+  displayName         String?
+  residenceId         String?              @db.Uuid
+  residence           Residence?           @relation(fields: [residenceId], references: [id], onDelete: Restrict)
   applications        Application[]
   maintenanceRequests MaintenanceRequest[]
   createdAt           DateTime             @default(now())
   updatedAt           DateTime             @updatedAt
 
+  @@index([residenceId])
   @@map("RoomType")
 }
 
 model Residence {
   id                       String                   @id @default(uuid()) @db.Uuid
   name                     String                   @unique
+  slug                     String?                  @unique
+  active                   Boolean                  @default(true)
+  acceptingApplications    Boolean                  @default(true)
+  advertisedCapacity       Int?
+  maleCapacity             Int?
+  femaleCapacity           Int?
+  allowedGenders           String[]                 @default([])
+  allowedInstitutions      String[]                 @default([])
+  websiteUrl               String?
+  applicationUrl           String?
+  applicationEmail         String?
+  phone                    String?
+  logoUrl                  String?
+  imageUrls                String[]                 @default([])
+  monthlyRentCents         Int?
   address                  String
   residenceType            String
   totalRooms               Int
@@ -262,8 +281,9 @@ model Residence {
   description              String
   facilities               String[]
   amenities                String[]
-  distanceToNWU            Float
-  distanceToShoppingCentre Float
+  distanceToNWU            Float?
+  distanceToShoppingCentre Float?
+  roomTypes                RoomType[]
   applications             Application[]
   communications           Communication[]
   storageRequests          StorageRequest[]         @relation("StorageResidence")
@@ -358,6 +378,9 @@ model Application {
   fundingType                   String?
   fundingReference              String?
   hasMedicalConditions          Boolean                    @default(false)
+  hasChronicMedication          Boolean                    @default(false)
+  chronicMedicationDetails      String?
+  guardianRelationship          String?
   additionalInformation         String?
   specialRequirements           String?
   adminNotes                    String?

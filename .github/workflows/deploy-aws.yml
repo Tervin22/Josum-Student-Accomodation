@@ -2,9 +2,6 @@ name: Deploy to AWS Cape Town
 
 on:
   workflow_dispatch:
-  push:
-    branches:
-      - main
 
 permissions:
   contents: read
@@ -23,8 +20,8 @@ env:
   API_BASE_URL: ${{ vars.API_BASE_URL }}
   WEB_ORIGIN: ${{ vars.WEB_ORIGIN }}
   NEXT_PUBLIC_API_URL: ${{ vars.NEXT_PUBLIC_API_URL }}
-  NEXT_PUBLIC_BRAND_LOGO_URL: ${{ vars.NEXT_PUBLIC_BRAND_LOGO_URL || 'https://josumres.co.za/wp-content/uploads/2025/08/Josum-Company-Logo-Final-Homepage.png' }}
-  NEXT_PUBLIC_AUTH_HERO_IMAGE_URL: ${{ vars.NEXT_PUBLIC_AUTH_HERO_IMAGE_URL || 'https://josumres.co.za/wp-content/uploads/2025/08/WhatsApp-Image-2025-07-24-at-15.32.24_7cd2a337.jpg' }}
+  NEXT_PUBLIC_BRAND_LOGO_URL: ${{ vars.NEXT_PUBLIC_BRAND_LOGO_URL || '/logo.svg' }}
+  NEXT_PUBLIC_AUTH_HERO_IMAGE_URL: ${{ vars.NEXT_PUBLIC_AUTH_HERO_IMAGE_URL || 'https://romares.co.za/wp-content/uploads/2026/09/exterior-1.jpg' }}
   S3_BUCKET: ${{ vars.S3_BUCKET }}
   SMTP_HOST: ${{ vars.SMTP_HOST }}
   SMTP_PORT: ${{ vars.SMTP_PORT }}
@@ -121,8 +118,8 @@ jobs:
         run: |
           set -euo pipefail
           image="${{ steps.login-ecr.outputs.registry }}/${WEB_ECR_REPOSITORY}:${GITHUB_SHA}"
-          brand_logo="${NEXT_PUBLIC_BRAND_LOGO_URL:-https://josumres.co.za/wp-content/uploads/2025/08/Josum-Company-Logo-Final-Homepage.png}"
-          hero_image="${NEXT_PUBLIC_AUTH_HERO_IMAGE_URL:-https://josumres.co.za/wp-content/uploads/2025/08/WhatsApp-Image-2025-07-24-at-15.32.24_7cd2a337.jpg}"
+          brand_logo="${NEXT_PUBLIC_BRAND_LOGO_URL:-/logo.svg}"
+          hero_image="${NEXT_PUBLIC_AUTH_HERO_IMAGE_URL:-https://romares.co.za/wp-content/uploads/2026/09/exterior-1.jpg}"
           docker build \
             -f apps/web/Dockerfile \
             --build-arg NEXT_PUBLIC_API_URL="$NEXT_PUBLIC_API_URL" \

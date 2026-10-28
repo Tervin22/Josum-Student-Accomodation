@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
-import { ChangeEvent, FormEvent, useState } from 'react';
+import { ChangeEvent, FormEvent, useEffect, useState } from 'react';
 import { UserPlus } from 'lucide-react';
 import { api, AuthSession, compactForm, saveSession } from '@/lib/api';
 import { AUTH_HERO_IMAGE_URL, BRAND_LOGO_URL, BRAND_NAME } from '@/lib/brand';
@@ -39,6 +39,11 @@ export default function RegisterPage() {
   const [loading, setLoading] = useState(false);
   const [idNumber, setIdNumber] = useState('');
   const [dateOfBirth, setDateOfBirth] = useState('');
+  const [loginHref, setLoginHref] = useState('/login');
+  useEffect(() => {
+    const residenceId = new URLSearchParams(window.location.search).get('residenceId');
+    if (residenceId) setLoginHref(`/login?portal=student&residenceId=${encodeURIComponent(residenceId)}`);
+  }, []);
 
   function updateIdNumber(event: ChangeEvent<HTMLInputElement>) {
     const nextIdNumber = event.target.value.replace(/\D/g, '').slice(0, 13);
@@ -58,7 +63,8 @@ export default function RegisterPage() {
       });
       saveSession(session);
       toast.success('Student account created');
-      router.replace('/student/dashboard');
+      const residenceId = new URLSearchParams(window.location.search).get('residenceId');
+      router.replace(residenceId ? `/student/dashboard?tab=apply&residenceId=${encodeURIComponent(residenceId)}` : '/student/dashboard?tab=apply');
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Registration failed');
     } finally {
@@ -142,7 +148,7 @@ export default function RegisterPage() {
             <UserPlus className="h-4 w-4" />
             Register
           </button>
-          <Link href="/login" className="text-sm font-medium text-slate-600 hover:underline">
+          <Link href={loginHref} className="text-sm font-medium text-slate-600 hover:underline">
             Back to sign in
           </Link>
         </div>
